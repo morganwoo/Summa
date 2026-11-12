@@ -135,7 +135,8 @@
 .curve-milestone.visible { opacity: 1; }
 
 .product-opening { padding-top: 120px; padding-bottom: 54px; }
-.phone-trio { position: relative; display: flex; justify-content: center; align-items: center; gap: 0; max-width: 920px; margin: 38px auto 0; padding: 12px 0 20px; perspective: 1400px; }
+.phone-trio { position: relative; display: flex; justify-content: center; align-items: center; gap: 16px; max-width: 920px; margin: 38px auto 0; padding: 12px 0 20px; perspective: 1400px; }
+.phone-trio .product-phone { transition: transform .65s cubic-bezier(.22, 1, .36, 1); }
 .product-phone { position: relative; isolation: isolate; flex: 0 0 254px; width: 254px; height: 550px; padding: 5px; border: 1px solid var(--phone-frame); border-radius: 39px; background: var(--phone-rim); box-shadow: var(--shadow-phone), var(--phone-depth-shadow); text-align: left; }
 .product-phone::before { content: ""; position: absolute; z-index: -1; inset: 1px -5px 0 5px; border-radius: 39px; border: 1px solid var(--phone-frame); background: var(--phone-metal); }
 .phone-side-key { position: absolute; z-index: -1; width: 4px; border-radius: 2px; background: var(--phone-metal); }
@@ -162,10 +163,15 @@
 .mini-grid span { aspect-ratio: 1; border-radius: 2px; background: color-mix(in oklab, var(--grid-ink) 10%, var(--card)); }
 .mini-grid .kept { background: var(--grid-ink); }
 .mini-grid .partial { background: color-mix(in oklab, var(--grid-ink) 48%, var(--card)); }
-.phone-left { margin-right: -18px; transform: translateY(10px) rotateY(13deg) rotateZ(-4deg) scale(.96); transform-origin: right center; }
+.phone-left { margin-right: 0; transform: translateY(10px) rotateY(13deg) rotateZ(-4deg) scale(.96); transform-origin: right center; }
 .phone-left::before { inset: 1px 5px 0 -7px; }
 .phone-center { z-index: 2; transform: none; }
-.phone-right { margin-left: -18px; transform: translateY(10px) rotateY(-13deg) rotateZ(4deg) scale(.96); transform-origin: left center; }
+.phone-right { margin-left: 0; transform: translateY(10px) rotateY(-13deg) rotateZ(4deg) scale(.96); transform-origin: left center; }
+@media (hover: hover) and (pointer: fine) and (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .phone-trio:hover .phone-left { transform: translate(-22px, 4px) rotateY(10deg) rotateZ(-7deg) scale(1); }
+  .phone-trio:hover .phone-center { transform: translateY(-8px) scale(1.04); }
+  .phone-trio:hover .phone-right { transform: translate(22px, 4px) rotateY(-10deg) rotateZ(7deg) scale(1); }
+}
 .phone-bottom-note { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 19px; font-size: 10px; color: var(--muted-foreground); }
 .plan-phase { padding: 12px 0; border-bottom: 1px solid var(--border); }
 .plan-phase span { font-size: 9px; color: var(--gold); }
@@ -177,7 +183,7 @@
 .feature-title { font-family: var(--font-serif); font-size: 52px; line-height: 1.08; }
 .onboarding-section { background: var(--phone-screen); }
 .onboarding-visual { position: relative; display: flex; justify-content: center; padding: 0 0 25px; perspective: 1400px; }
-.onboarding-visual .product-phone { width: 292px; flex-basis: 292px; height: 632px; transform: rotateY(-9deg) rotateZ(2deg); }
+.onboarding-visual .product-phone { width: 292px; flex-basis: 292px; height: 632px; transform: none; }
 .onboarding-visual .phone-content { padding: 10px 22px; }
 .onboarding-visual .phone-title { font-size: 38px; }
 .onboarding-statue { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .2; }
@@ -187,7 +193,7 @@
 .plan-notification { position: absolute; display: flex; align-items: center; gap: 13px; bottom: 46px; left: 50%; transform: translateX(-50%); width: 352px; max-width: 100%; padding: 18px; border: 1px solid var(--phone-edge); border-radius: 8px; background: var(--card); box-shadow: var(--shadow-widget); }
 .notification-icon { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; background: var(--cell-1); color: var(--gold); }
 .widget-composition { display: flex; justify-content: center; perspective: 1200px; }
-.widget-phone { flex-basis: 302px; width: 302px; height: 652px; transform: rotateY(-5deg); }
+.widget-phone { flex-basis: 302px; width: 302px; height: 652px; transform: none; }
 .widget-phone .phone-screen { background: var(--widget-wallpaper); }
 .widget-wallpaper { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; }
 .widget-phone .phone-status, .widget-phone .phone-island, .widget-phone .phone-home { z-index: 2; position: relative; }
@@ -251,8 +257,8 @@
   .product-opening { padding-top: 100px; padding-bottom: 40px; }
   .phone-trio { height: 365px; max-width: 470px; margin-top: 24px; gap: 0; }
   .phone-center { transform: scale(.60); flex-basis: 254px; margin: 0 -37px; }
-  .phone-left { position: absolute; right: calc(50% + 14px); margin: 0; transform: rotateY(13deg) rotateZ(-4deg) scale(.56); transform-origin: right center; }
-  .phone-right { position: absolute; left: calc(50% + 14px); margin: 0; transform: rotateY(-13deg) rotateZ(4deg) scale(.56); transform-origin: left center; }
+  .phone-left { position: absolute; right: calc(50% + 22px); margin: 0; transform: rotateY(13deg) rotateZ(-4deg) scale(.56); transform-origin: right center; }
+  .phone-right { position: absolute; left: calc(50% + 22px); margin: 0; transform: rotateY(-13deg) rotateZ(4deg) scale(.56); transform-origin: left center; }
   .feature-title { font-size: 40px; }
   .widget-small { width: 260px; max-width: 100%; justify-self: center; }
   .widget-strip { grid-column: auto; }
@@ -260,7 +266,13 @@
   .widget-wide .mini-grid { gap: 3px; }
   .weekly-row { gap: 6px; }
 }
+@media (hover: hover) and (pointer: fine) and (min-width: 600px) and (max-width: 767px) and (prefers-reduced-motion: no-preference) {
+  .phone-trio:hover .phone-left { transform: translateX(-10px) rotateY(10deg) rotateZ(-7deg) scale(.58); }
+  .phone-trio:hover .phone-center { transform: translateY(-5px) scale(.63); }
+  .phone-trio:hover .phone-right { transform: translateX(10px) rotateY(-10deg) rotateZ(7deg) scale(.58); }
+}
 @media (prefers-reduced-motion: reduce) {
+  .phone-trio .product-phone { transition: none; }
   html { scroll-behavior: auto; }
   .reveal { transition: none; transform: none; opacity: 1; }
   .scroll-cue, .drawn { animation: none; }

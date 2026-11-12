@@ -21,7 +21,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <Link to="/" className="title-roman absolute left-1/2 -translate-x-1/2 rounded-full border border-foreground/40 px-6 py-1 text-sm tracking-[0.5em]">
-          Stoa 90
+          Summa
         </Link>
         <div className="hidden md:block"><StoreButtons compact /></div>
         <button aria-label="Menu" onClick={() => setOpen(!open)} className="ml-auto flex flex-col gap-1.5 md:hidden">
@@ -38,7 +38,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
       )}
       <main>{children}</main>
       <footer className="flex flex-col items-center justify-between gap-4 border-t px-6 py-8 text-xs text-muted-foreground md:flex-row md:px-10">
-        <span>© 2026 Stoa 90 — Memento mori. Memento vivere.</span>
+        <span>© 2026 Summa — Memento mori. Memento vivere.</span>
         <StoreButtons compact />
       </footer>
     </div>

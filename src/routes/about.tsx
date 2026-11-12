@@ -7,9 +7,9 @@ import { StoreButtons } from "@/components/StoreButtons";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About Stoa 90 — Stoic Habit Tracking" },
-      { name: "description", content: "Why Stoa 90 exists: a minimal, noise-free habit tracker built on Stoic philosophy and a 90-day transformation." },
-      { property: "og:title", content: "About Stoa 90" },
+      { title: "About Summa — Stoic Habit Tracking" },
+      { name: "description", content: "Why Summa exists: a minimal, noise-free habit tracker built on Stoic philosophy and a 90-day transformation." },
+      { property: "og:title", content: "About Summa" },
       { property: "og:description", content: "Simplicity as discipline. The story behind the 90-day stoic habit tracker." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -34,7 +34,7 @@ function About() {
             <p className="eyebrow mb-6">About</p>
             <h1 className="title-roman text-4xl md:text-5xl">Less, but kept.</h1>
             <p className="mt-8 font-serif text-xl text-muted-foreground">
-              Stoa 90 was born from frustration with habit apps that wanted to be everything — journals, social feeds, gamified reward machines. The Stoics taught that clarity comes from removing what is unnecessary.
+              Summa was born from frustration with habit apps that wanted to be everything — journals, social feeds, gamified reward machines. The Stoics taught that clarity comes from removing what is unnecessary.
             </p>
             <p className="mt-6 font-serif text-xl text-muted-foreground">
               So we removed it. What remains is a single heatmap, a single tap, and ninety days to prove to yourself what you are capable of.
