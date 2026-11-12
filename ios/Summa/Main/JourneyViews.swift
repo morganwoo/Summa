@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import UniformTypeIdentifiers
 import SummaCore
 
 enum JourneySheet: String, Identifiable {
@@ -248,9 +249,12 @@ private struct MilestonePhotoRow: View {
     let plan: Plan
     let milestoneDay: Int
     @State private var picked: PhotosPickerItem? = nil
+    @State private var working = false
+    @State private var problem: String? = nil
 
     var body: some View {
         let photo = plan.sortedPhotos.last { $0.milestoneDay == milestoneDay }
+        VStack(alignment: .leading, spacing: 6) {
         HStack(spacing: 12) {
             if let photo, let image = PhotoStore.image(photo.fileName) {
                 Image(uiImage: image).resizable().scaledToFill().frame(width: 56, height: 56)
@@ -262,16 +266,49 @@ private struct MilestonePhotoRow: View {
                     .font(.subheadline.weight(.semibold)).foregroundStyle(theme.gold).frame(minHeight: 44)
             }
         }
+        .overlay(alignment: .trailing) { if working { ProgressView().tint(theme.gold) } }
         .onChange(of: picked) { _, item in
             guard let item else { return }
+            working = true
+            problem = nil
             Task { @MainActor in
-                if let data = try? await item.loadTransferable(type: Data.self) {
-                    if let old = photo { PlanStore.deletePhoto(old, in: context) }
-                    PlanStore.addPhoto(data, milestoneDay: milestoneDay, to: plan, today: clock.today, in: context)
-                }
+                // The old photo is removed only once the new one is safely stored.
+                problem = await PhotoImport.add(item, milestoneDay: milestoneDay, replacing: photo, to: plan, today: clock.today, in: context)
+                working = false
                 picked = nil
             }
         }
+        if let problem {
+            Text(problem).font(.footnote).foregroundStyle(theme.muted).accessibilityIdentifier("milestone.photoProblem")
+        }
+        }
+    }
+}
+
+/// Loads a picked photo and stores it. Returns a sentence to show when it could not be done.
+@MainActor
+enum PhotoImport {
+    /// Some library items only load as an image type, not as plain data.
+    private struct PickedImage: Transferable {
+        let data: Data
+        static var transferRepresentation: some TransferRepresentation {
+            DataRepresentation(importedContentType: .image) { PickedImage(data: $0) }
+        }
+    }
+
+    static func add(_ item: PhotosPickerItem, milestoneDay: Int?, replacing old: ProgressPhoto? = nil, to plan: Plan, today: DayKey,
+                    in context: ModelContext) async -> String? {
+        var data = try? await item.loadTransferable(type: Data.self)
+        if data == nil { data = (try? await item.loadTransferable(type: PickedImage.self))?.data }
+        guard let data else {
+            return "That photo could not be loaded. If it is stored in iCloud, open it in Photos first so it downloads, or choose another."
+        }
+        guard PlanStore.addPhoto(data, milestoneDay: milestoneDay, to: plan, today: today, in: context) else {
+            return "That photo could not be saved. Choose a different image, or check that the device has free space."
+        }
+        if let old { PlanStore.deletePhoto(old, in: context) }
+        Haptics.commit()
+        return nil
     }
 }
 
@@ -284,6 +321,8 @@ struct PhotoDiaryView: View {
     let plan: Plan
     @State private var picked: PhotosPickerItem? = nil
     @State private var deleting: ProgressPhoto? = nil
+    @State private var working = false
+    @State private var problem: String? = nil
 
     var body: some View {
         let photos = plan.sortedPhotos
@@ -298,6 +337,13 @@ struct PhotoDiaryView: View {
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(theme.divider))
             }
             .accessibilityIdentifier("photos.add")
+            .disabled(working)
+            if working {
+                HStack(spacing: 10) { ProgressView().tint(theme.gold); Text("Saving photo…").font(.footnote).foregroundStyle(theme.muted) }
+            }
+            if let problem {
+                Text(problem).font(.footnote).foregroundStyle(theme.muted).card().accessibilityIdentifier("photos.problem")
+            }
             if photos.isEmpty {
                 Text("No photos yet.").font(.subheadline).foregroundStyle(theme.muted).card()
             }
@@ -323,10 +369,11 @@ struct PhotoDiaryView: View {
         }
         .onChange(of: picked) { _, item in
             guard let item else { return }
+            working = true
+            problem = nil
             Task { @MainActor in
-                if let data = try? await item.loadTransferable(type: Data.self) {
-                    PlanStore.addPhoto(data, milestoneDay: nil, to: plan, today: clock.today, in: context)
-                }
+                problem = await PhotoImport.add(item, milestoneDay: nil, to: plan, today: clock.today, in: context)
+                working = false
                 picked = nil
             }
         }
@@ -469,6 +516,8 @@ struct GraduationView: View {
         let due = Graduation.isDue(timelines: timelines, planStart: plan.start, today: clock.today)
         let result = Graduation.evaluate(timelines: timelines)
         VStack(alignment: .leading, spacing: 18) {
+            GraduationRingView(result: result, stage: plan.stage(today: clock.today), day: plan.dayNumber(today: clock.today),
+                               finished: plan.isFinished(today: clock.today))
             if !due {
                 notYet(timelines)
             } else if result.eligible {
@@ -793,5 +842,82 @@ struct ChaptersView: View {
         .sheet(item: $viewing) { plan in
             JourneyHost(sheet: .graduation, plan: plan).environment(\.theme, theme)
         }
+    }
+}
+
+
+// MARK: Graduation ring
+
+/// The large ring at the top of Graduation. It fills with activities completed out of every
+/// activity scheduled across the 90 days, tinted by the current stage, with a mark at 80%.
+struct GraduationRingView: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let result: GraduationResult
+    let stage: Stage
+    let day: Int
+    let finished: Bool
+
+    @State private var shown: Double = 0
+
+    var body: some View {
+        let fraction = GraduationRing.fraction(result)
+        let colors = GraduationRing.gradientHexes(for: stage).map { Color(hex: $0) }
+        let aura = GraduationRing.auraIntensity(day: day, finished: finished)
+        GeometryReader { proxy in
+            let side = min(proxy.size.width, proxy.size.height)
+            let line = max(18, side * 0.085)
+            ZStack {
+                if aura > 0 {
+                    // A still glow that strengthens toward day 90. Nothing here animates continuously.
+                    Circle()
+                        .stroke(Color(hex: "#F6D98A").opacity(0.20 + 0.50 * aura), lineWidth: line * (1.1 + 0.9 * aura))
+                        .blur(radius: 10 + 18 * aura)
+                        .padding(line / 2)
+                }
+                Circle().stroke(stage.color.opacity(theme.isDark ? 0.14 : 0.18), lineWidth: line).padding(line / 2)
+                Circle()
+                    .trim(from: 0, to: max(0.0001, shown))
+                    .stroke(AngularGradient(colors: colors + [colors[0]], center: .center, startAngle: .degrees(0), endAngle: .degrees(360)),
+                            style: StrokeStyle(lineWidth: line, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .shadow(color: .black.opacity(theme.isDark ? 0.35 : 0.12), radius: 3, y: 2)
+                    .padding(line / 2)
+                    .opacity(shown > 0 ? 1 : 0)
+                // The graduation line at 80%.
+                Capsule()
+                    .fill(theme.text.opacity(0.75))
+                    .frame(width: 2, height: line + 8)
+                    .offset(y: -(side / 2 - line / 2))
+                    .rotationEffect(.degrees(360 * GraduationRing.thresholdFraction))
+                VStack(spacing: 4) {
+                    Text("\(result.percent)%")
+                        .font(SummaFont.serif(side * 0.26, relativeTo: .largeTitle))
+                        .minimumScaleFactor(0.5).lineLimit(1)
+                        .contentTransition(.numericText())
+                    Text("GRADUATION PROGRESS").font(.caption.weight(.semibold)).tracking(2).foregroundStyle(theme.muted)
+                    Text("\(result.completed) of \(result.scheduled) scheduled activities")
+                        .font(.footnote).foregroundStyle(theme.muted)
+                    Text("\(Graduation.threshold)% graduates").font(.caption).foregroundStyle(stage.color)
+                }
+                .padding(.horizontal, line * 1.6)
+            }
+            .frame(width: side, height: side)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: 380)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12).padding(.horizontal, 8)
+        .onAppear { fill(to: fraction) }
+        .onChange(of: fraction) { _, value in fill(to: value) }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Graduation progress")
+        .accessibilityValue("\(result.percent) percent. \(result.completed) of \(result.scheduled) scheduled activities completed across 90 days. \(Graduation.threshold) percent is needed to graduate.")
+        .accessibilityIdentifier("graduation.ring")
+    }
+
+    private func fill(to value: Double) {
+        if reduceMotion { shown = value } else { withAnimation(.easeOut(duration: 0.9)) { shown = value } }
     }
 }

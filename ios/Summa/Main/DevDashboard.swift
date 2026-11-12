@@ -63,7 +63,7 @@ struct DevDashboardView: View {
                             ForEach(DevScenario.presetRates, id: \.self) { Text("\($0)%").tag($0) }
                         }
                         .pickerStyle(.segmented)
-                        Text("Graduation needs \(Graduation.threshold)% of scheduled activities. 79% shows the summary without the laurel; 80% and 100% graduate.")
+                        Text("Graduation needs \(Graduation.threshold)% of scheduled activities. 79% shows the summary without the laurel; 80% and 100% graduate. After day 90, “Continue with the same habits” starts a new 90 days inside the preview only.")
                             .font(.footnote).foregroundStyle(theme.muted)
                     }
                     .card()
@@ -119,6 +119,18 @@ struct DevDashboardView: View {
     }
 }
 
+/// Shows the newest plan in the preview store, exactly as the app's own root does. Continuing into a
+/// new 90-day chapter inside the preview therefore lands on that new chapter, with the old one kept.
+private struct PreviewRoot: View {
+    @Query(sort: \Plan.createdAt, order: .reverse) private var plans: [Plan]
+
+    var body: some View {
+        if let plan = plans.first {
+            MainTabView(plan: plan).id(plan.id)
+        }
+    }
+}
+
 /// Runs the production tab view over an in-memory store. Nothing here is written to disk.
 private struct DevPreviewHost: View {
     @Environment(\.theme) private var theme
@@ -131,8 +143,8 @@ private struct DevPreviewHost: View {
 
     var body: some View {
         Group {
-            if let container, let plan {
-                MainTabView(plan: plan)
+            if let container, plan != nil {
+                PreviewRoot()
                     .modelContainer(container)
                     .overlay(alignment: .topLeading) {
                         Button { close() } label: {
@@ -192,6 +204,7 @@ private struct DevPreviewHost: View {
     }
 
     private func close() {
+        PhotoStore.clearPreview() // while the sandbox is still up
         Store.shared.setDebugOverride(nil)
         DevSandbox.isActive = false
         exit()

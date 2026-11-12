@@ -181,3 +181,51 @@ public enum MilestoneBuilder {
         ]
     }
 }
+
+/// Numbers behind the graduation ring. The ring shows the graduation calculation itself:
+/// activities completed out of every activity scheduled across the 90 days. It is not the
+/// share of days that have passed, and the 80% rule is unchanged.
+public enum GraduationRing {
+    /// 0...1, how much of the ring is filled.
+    public static func fraction(_ result: GraduationResult) -> Double {
+        guard result.scheduled > 0 else { return 0 }
+        return min(1, max(0, Double(result.completed) / Double(result.scheduled)))
+    }
+
+    /// Where the 80% mark sits on the ring.
+    public static var thresholdFraction: Double { Double(Graduation.threshold) / 100 }
+
+    /// How strongly the ring radiates, 0...1. Nothing before Transformation, a faint aura from
+    /// day 67, rising quickly over days 80 to 90, and full once the plan is finished.
+    public static func auraIntensity(day: Int, finished: Bool = false) -> Double {
+        if finished { return 1 }
+        guard day >= 67 else { return 0 }
+        if day < 80 { return 0.15 + 0.15 * Double(day - 67) / 13 }
+        return min(1, 0.30 + 0.70 * Double(min(day, 90) - 80) / 10)
+    }
+
+    /// The ring's gradient for a stage, built from that stage's own color: a deeper shade,
+    /// the color itself, a lighter highlight, and the color again.
+    public static func gradientHexes(for stage: Stage) -> [String] {
+        let base = stage.accentHex
+        let highlight = stage == .transformation ? "#FFF1CF" : "#FFFFFF"
+        return [blend(base, toward: "#000000", by: 0.32), base, blend(base, toward: highlight, by: stage == .transformation ? 0.55 : 0.38), base]
+    }
+
+    /// Mixes two `#RRGGBB` colors. Returns the first unchanged if either is malformed.
+    public static func blend(_ hex: String, toward other: String, by amount: Double) -> String {
+        func parts(_ value: String) -> [Double]? {
+            let digits = value.hasPrefix("#") ? String(value.dropFirst()) : value
+            guard digits.count == 6, let number = Int(digits, radix: 16) else { return nil }
+            return [Double((number >> 16) & 0xFF), Double((number >> 8) & 0xFF), Double(number & 0xFF)]
+        }
+        guard let from = parts(hex), let to = parts(other) else { return hex }
+        let t = min(1, max(0, amount))
+        let mixed = zip(from, to).map { Int(($0 + ($1 - $0) * t).rounded()) }
+        let text = mixed.map { component -> String in
+            let piece = String(component, radix: 16, uppercase: true)
+            return piece.count == 1 ? "0" + piece : piece
+        }.joined()
+        return "#" + text
+    }
+}

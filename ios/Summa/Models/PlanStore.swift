@@ -59,13 +59,23 @@ enum PlanStore {
         return plan
     }
 
-    static func addPhoto(_ data: Data, milestoneDay: Int?, to plan: Plan, today: DayKey, in context: ModelContext) {
-        guard !DevSandbox.isActive else { return } // the developer preview never writes image files
-        guard let fileName = PhotoStore.save(data) else { return }
+    /// Stores the image and records it. Returns false when the image could not be read or written.
+    /// In the developer preview the file goes to a temporary folder that is emptied when the preview closes.
+    @discardableResult
+    static func addPhoto(_ data: Data, milestoneDay: Int?, to plan: Plan, today: DayKey, in context: ModelContext) -> Bool {
+        guard let fileName = PhotoStore.save(data) else { return false }
         let photo = ProgressPhoto(day: today, milestoneDay: milestoneDay, fileName: fileName)
         context.insert(photo)
         photo.plan = plan
-        try? context.save()
+        do {
+            try context.save()
+            return true
+        } catch {
+            plan.photos.removeAll { $0.id == photo.id }
+            context.delete(photo)
+            PhotoStore.delete(fileName)
+            return false
+        }
     }
 
     /// Removes the record and the image file together.

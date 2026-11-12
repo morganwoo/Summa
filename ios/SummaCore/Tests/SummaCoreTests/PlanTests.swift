@@ -791,3 +791,54 @@ private func profile(focus: [String] = [], objective: String = "", obstacles: [S
         #expect(RomanNumeral.string(4000) == "4000")
     }
 }
+
+@Suite struct GraduationRingTests {
+    private func timeline(completedDays: Int, start: DayKey) -> HabitTimeline {
+        HabitTimeline(planStart: start, habitStart: start, archivedOn: nil, rules: [ScheduleRule(effectiveFrom: start, weekdays: .everyDay)],
+                      completed: Set((0..<completedDays).map { start.adding($0) }))
+    }
+
+    @Test func theRingShowsCompletedOverEverythingScheduledNotDaysElapsed() {
+        let start = DayKey(year: 2026, month: 1, day: 5)
+        // 30 of 90 scheduled activities done: one third, whatever today's date is.
+        let result = Graduation.evaluate(timelines: [timeline(completedDays: 30, start: start)])
+        #expect(result.scheduled == 90)
+        #expect(abs(GraduationRing.fraction(result) - 1.0 / 3.0) < 0.0001)
+        #expect(!result.eligible)
+        // A missed day never fills the ring; a completed one does.
+        let more = Graduation.evaluate(timelines: [timeline(completedDays: 31, start: start)])
+        #expect(GraduationRing.fraction(more) > GraduationRing.fraction(result))
+        #expect(GraduationRing.fraction(Graduation.evaluate(timelines: [timeline(completedDays: 90, start: start)])) == 1)
+        #expect(GraduationRing.fraction(GraduationResult(completed: 0, scheduled: 0, percent: 0, eligible: false)) == 0)
+    }
+
+    @Test func eligibilityIsStillEightyPercent() {
+        let start = DayKey(year: 2026, month: 1, day: 5)
+        #expect(Graduation.evaluate(timelines: [timeline(completedDays: 72, start: start)]).eligible)
+        #expect(!Graduation.evaluate(timelines: [timeline(completedDays: 71, start: start)]).eligible)
+        #expect(GraduationRing.thresholdFraction == 0.8)
+    }
+
+    @Test func theAuraBelongsToTransformationAndGrowsTowardDayNinety() {
+        #expect(GraduationRing.auraIntensity(day: 1) == 0)
+        #expect(GraduationRing.auraIntensity(day: 66) == 0)
+        #expect(GraduationRing.auraIntensity(day: 67) > 0)
+        #expect(GraduationRing.auraIntensity(day: 79) < GraduationRing.auraIntensity(day: 80) + 0.0001)
+        #expect(GraduationRing.auraIntensity(day: 85) > GraduationRing.auraIntensity(day: 80))
+        #expect(GraduationRing.auraIntensity(day: 90) == 1)
+        #expect(GraduationRing.auraIntensity(day: 90) - GraduationRing.auraIntensity(day: 80) > GraduationRing.auraIntensity(day: 80) - GraduationRing.auraIntensity(day: 67))
+        #expect(GraduationRing.auraIntensity(day: 40, finished: true) == 1)
+    }
+
+    @Test func gradientsComeFromTheStageColors() {
+        for stage in Stage.allCases {
+            let stops = GraduationRing.gradientHexes(for: stage)
+            #expect(stops.count == 4)
+            #expect(stops[1] == stage.accentHex)
+            #expect(stops[0] != stage.accentHex && stops[2] != stage.accentHex)
+        }
+        #expect(GraduationRing.blend("#000000", toward: "#FFFFFF", by: 0.5) == "#808080")
+        #expect(GraduationRing.blend("#5FAE7A", toward: "#000000", by: 0) == "#5FAE7A")
+        #expect(GraduationRing.blend("nonsense", toward: "#FFFFFF", by: 0.5) == "nonsense")
+    }
+}
