@@ -6,9 +6,9 @@ import { StoreButtons } from "@/components/StoreButtons";
 export const Route = createFileRoute("/reviews")({
   head: () => ({
     meta: [
-      { title: "Reviews — Stoa 90 Habit Tracker" },
-      { name: "description", content: "Five-star reviews from people who completed the Stoa 90 stoic habit program." },
-      { property: "og:title", content: "Stoa 90 Reviews" },
+      { title: "Reviews — Summa Habit Tracker" },
+      { name: "description", content: "Five-star reviews from people who completed the Summa stoic habit program." },
+      { property: "og:title", content: "Summa Reviews" },
       { property: "og:description", content: "What people say after ninety days of discipline." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

@@ -11,9 +11,9 @@ import { ThreePhones, OnboardingSection, WidgetsSection } from "@/components/Pro
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Stoa 90 — The 90-Day Stoic Habit Tracker" },
-      { name: "description", content: "Build your discipline with Stoa 90. Personalized AI onboarding, a tailored ninety-day plan, simple habit heatmaps, and quiet home-screen widgets." },
-      { property: "og:title", content: "Stoa 90 — The 90-Day Stoic Habit Tracker" },
+      { title: "Summa — The 90-Day Stoic Habit Tracker" },
+      { name: "description", content: "Build your discipline with Summa. Personalized AI onboarding, a tailored ninety-day plan, simple habit heatmaps, and quiet home-screen widgets." },
+      { property: "og:title", content: "Summa — The 90-Day Stoic Habit Tracker" },
       { property: "og:description", content: "Your story. Your ninety-day plan. Stoic habit tracking, personalized AI onboarding, and quiet home-screen widgets." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -28,7 +28,7 @@ function Index() {
       {/* Hero */}
       <section className="product-opening px-6 text-center">
         <p className="eyebrow mb-4">Ninety days. One discipline.</p>
-        <h1 className="font-display text-4xl md:text-5xl">Stoa 90</h1>
+        <h1 className="font-display text-4xl md:text-5xl">Summa</h1>
         <p className="mx-auto mt-4 max-w-lg font-serif text-xl text-muted-foreground">A considered approach to becoming who you want to be.</p>
         <ThreePhones />
         <div className="mt-8"><StoreButtons /></div>

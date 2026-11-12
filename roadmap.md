@@ -19,3 +19,9 @@
 - [x] Match slimmer phone proportions, overlapping arrangement, and metallic edges without changing app screens.
 - [x] Show widgets in an Apple-style home screen with familiar general-purpose applications.
 - [x] Verify the phone presentation at desktop and mobile sizes.
+
+# Summa phone refinements
+- [x] Straighten onboarding and widget phones while preserving screen contents.
+- [x] Space the homepage phones and add a restrained hover fan with enlargement.
+- [x] Rename the app and project to Summa.
+- [x] Verify the presentation and hover behavior across screen sizes.
