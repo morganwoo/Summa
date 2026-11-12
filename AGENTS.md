@@ -33,3 +33,5 @@ use the editor.
 - Keep promotional phone, onboarding, and widget previews browser-safe and illustrative; they must not simulate a live AI service or saved user plans.
 - Keep phone fan effects CSS-only, limited to fine-pointer hover, and disabled with reduced motion to preserve stable touch layouts.
 - Normalize the habit curve path length so the scroll-triggered drawing reaches each milestone consistently and remains visible with reduced motion.
+
+- Display uploaded app screenshots inside the shared phone frame without duplicate status bars or islands; crop only the uploaded outer hardware to preserve screen content.
