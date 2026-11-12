@@ -1,0 +1,22 @@
+{
+  "name": "summa-plan-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The single service the Summa iOS app calls to draft a 90-day plan.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "test": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

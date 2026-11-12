@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Summa</string>
+	<key>SummaAPIBaseURL</key>
+	<string>$(SUMMA_API_BASE_URL)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>SummaCormorant-Regular.ttf</string>
+		<string>SummaCormorant-Italic.ttf</string>
+		<string>SummaCinzel-Regular.ttf</string>
+	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Summa listens only while you dictate an answer. Audio is transcribed live and never saved.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Summa turns your spoken answers into text you can edit before sending.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+</dict>
+</plist>
