@@ -21,7 +21,7 @@
 - [x] Verify the phone presentation at desktop and mobile sizes.
 
 # Summa phone refinements
-- [ ] Straighten onboarding and widget phones while preserving screen contents.
-- [ ] Space the homepage phones and add a restrained hover fan with enlargement.
-- [ ] Rename the app and project to Summa.
-- [ ] Verify the presentation and hover behavior across screen sizes.
+- [x] Straighten onboarding and widget phones while preserving screen contents.
+- [x] Space the homepage phones and add a restrained hover fan with enlargement.
+- [x] Rename the app and project to Summa.
+- [x] Verify the presentation and hover behavior across screen sizes.
