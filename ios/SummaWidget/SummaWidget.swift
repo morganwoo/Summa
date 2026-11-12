@@ -44,7 +44,7 @@ struct TodayProvider: TimelineProvider {
     }
 }
 
-private struct WidgetColors {
+struct WidgetColors {
     let background: Color
     let text: Color
     let muted: Color
@@ -211,5 +211,8 @@ struct SummaTodayWidget: Widget {
 struct SummaWidgetBundle: WidgetBundle {
     var body: some Widget {
         SummaTodayWidget()
+        SummaHabitWidget()
+        SummaWeekWidget()
+        SummaVictoryWidget()
     }
 }

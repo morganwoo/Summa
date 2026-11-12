@@ -75,6 +75,9 @@ final class Backend: ObservableObject {
     @Published private(set) var lastSync: Date?
     /// What happened to the last confirmation link that was opened, for the sign-in card to show.
     @Published var authNotice: String?
+    /// What the sign-in service said about the last failed account request: its short code and message.
+    /// These describe the failure, not the person, and are used to choose a clearer sentence.
+    private(set) var lastAuthProblem: (code: String, message: String)?
 
     private static let keychainAccount = "backend-session"
     private static let verifierAccount = "backend-pkce-verifier"
@@ -175,6 +178,34 @@ final class Backend: ObservableObject {
         return true
     }
 
+    /// A plain sentence for a failed account request, or nil when there is nothing more specific to say.
+    func authProblemSentence(status: Int) -> String? {
+        guard let problem = lastAuthProblem else { return nil }
+        let text = (problem.code + " " + problem.message).lowercased()
+        var sentence: String?
+        if text.contains("sending") && text.contains("email") {
+            sentence = "The confirmation email could not be sent, so the account was not created. Please try again later."
+        } else if text.contains("not authorized") || text.contains("email_address_not_authorized") {
+            sentence = "Confirmation emails cannot be sent to this address yet."
+        } else if text.contains("rate limit") || text.contains("over_email_send_rate_limit") {
+            sentence = "Too many emails were requested. Wait a while and try again."
+        } else if text.contains("already registered") || text.contains("user_already_exists") {
+            sentence = "That email already has an account. Sign in instead."
+        } else if text.contains("weak_password") || text.contains("password should") {
+            sentence = "That password is too weak. Use at least 8 characters."
+        } else if text.contains("database error") {
+            sentence = "The account could not be created just now. Please try again later."
+        } else if text.contains("signups not allowed") || text.contains("signup_disabled") {
+            sentence = "New accounts are switched off at the moment."
+        }
+        #if DEBUG
+        let note = "\n\nDeveloper note: Supabase answered \(status) \(problem.code.isEmpty ? "" : "[\(problem.code)] ")\(problem.message). See Supabase > Logs > Auth for the full reason."
+        return (sentence ?? "That did not work.") + note
+        #else
+        return sentence
+        #endif
+    }
+
     func signOut() async {
         _ = try? await send("POST", "auth/v1/logout")
         clearSession()
@@ -237,6 +268,7 @@ final class Backend: ObservableObject {
     private func send(_ method: String, _ path: String, query: [URLQueryItem] = [], body: Data? = nil,
                       authorized: Bool = true, prefer: String? = nil) async throws -> Data {
         guard let config else { throw Failure.notConfigured }
+        if path.hasPrefix("auth/v1") { lastAuthProblem = nil }
         var components = URLComponents(url: config.url.appendingPathComponent(path), resolvingAgainstBaseURL: false)
         if !query.isEmpty { components?.queryItems = query }
         guard let url = components?.url else { throw Failure.notConfigured }
@@ -254,7 +286,12 @@ final class Backend: ObservableObject {
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             if (200..<300).contains(status) { return data }
             // PostgREST reports the SQLSTATE in "code". Bodies are never logged.
-            let code = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["code"] as? String
+            let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let code = body?["code"] as? String
+            if path.hasPrefix("auth/v1") {
+                lastAuthProblem = (code: (body?["error_code"] as? String) ?? "",
+                                   message: String(((body?["msg"] as? String) ?? (body?["error_description"] as? String) ?? (body?["message"] as? String) ?? "").prefix(200)))
+            }
             if code == "23505" { throw Failure.usernameTaken }
             if code == "42501" { throw Failure.proRequired }
             if code == "SF001" { throw Failure.friendLimit }

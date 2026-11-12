@@ -96,6 +96,7 @@ struct MainTabView: View {
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: celebrating)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: stage)
         .onAppear {
+            WidgetBridge.ingestPending(plan: plan, today: clock.today, in: context) // before publishing, so a widget check-in is never overwritten
             WidgetBridge.publish(plan: plan)
             Reminders.sync(plan: plan)
             celebrating = StageMemory.stageToCelebrate(for: plan, today: clock.today)

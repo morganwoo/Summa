@@ -51,6 +51,8 @@ struct RootView: View {
     @EnvironmentObject private var clock: TodayClock
     @Query(sort: \Plan.createdAt, order: .reverse) private var plans: [Plan]
     @State private var paywall: PaywallContext? = nil
+    @State private var loggingVictory = false
+    @Environment(\.modelContext) private var context
     /// True while someone with a finished chapter is setting up the next one.
     @AppStorage("summa.newChapter") private var startingNewChapter = false
 
@@ -69,11 +71,19 @@ struct RootView: View {
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: onboarding.stage)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.5), value: plans.first?.id)
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { clock.refresh() }
+            if phase == .active {
+                clock.refresh()
+                // Check-ins made from a widget button while the app was closed are recorded now.
+                if let plan = plans.first { WidgetBridge.ingestPending(plan: plan, today: clock.today, in: context) }
+            }
         }
         .onOpenURL { url in
             // The locked widget links here: tapping it is the request to unlock widgets.
             if url.scheme == "summa", url.host == "pro", !Entitlements.isPro { paywall = .widgets }
+            // The "Log a victory" widget opens a conversation with Summa. Without Pro it leads to the subscription page.
+            if url.scheme?.lowercased() == "summa", url.host?.lowercased() == "victory", plans.first != nil, !startingNewChapter {
+                if Entitlements.isPro { loggingVictory = true } else { paywall = .reflections }
+            }
             // The email confirmation link returns here with a one-time code.
             if url.scheme?.lowercased() == "summa", url.host?.lowercased() == "auth" {
                 Task { await Backend.shared.handleCallback(url) }
@@ -81,6 +91,17 @@ struct RootView: View {
         }
         .sheet(item: $paywall) { context in
             SummaProView(context: context).environment(\.theme, theme)
+        }
+        .sheet(isPresented: $loggingVictory) {
+            if let plan = plans.first {
+                NavigationStack {
+                    CompanionChatView(plan: plan, purpose: .victory, onSaved: { loggingVictory = false })
+                        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { loggingVictory = false } } }
+                }
+                .environment(\.theme, theme)
+                .environmentObject(clock)
+                .environmentObject(Store.shared)
+            }
         }
     }
 

@@ -151,6 +151,9 @@ private struct SignInCard: View {
                     try await backend.signIn(email: email, password: password)
                     password = ""
                 }
+            } catch Backend.Failure.server(let status) where backend.authProblemSentence(status: status) != nil && (mode != 0 || status >= 500) {
+                // The sign-in service said what went wrong; say that instead of a status number.
+                message = backend.authProblemSentence(status: status)
             } catch Backend.Failure.server(let status) where status == 400 || status == 401 || status == 422 {
                 message = mode == 1 ? "That did not work. The email may already have an account, or the password is too weak."
                                     : (mode == 2 ? "That code did not work. Try again." : "Email or password is not right, or the email is not confirmed yet.")

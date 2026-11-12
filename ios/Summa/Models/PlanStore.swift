@@ -340,7 +340,8 @@ enum WidgetBridge {
         guard !DevSandbox.isActive else { return }
         let start = plan.start
         let habits = plan.activeHabits.map {
-            WidgetSnapshot.Habit(id: $0.id, title: $0.title, colorHex: $0.colorHex, symbol: $0.symbol, timeline: $0.timeline(planStart: start))
+            WidgetSnapshot.Habit(id: $0.id, title: $0.title, colorHex: $0.colorHex, symbol: $0.symbol, timeline: $0.timeline(planStart: start),
+                                 detail: String($0.action.prefix(80)))
         }
         let white = UserDefaults.standard.string(forKey: ThemeChoice.storageKey) == ThemeChoice.white.rawValue
         let snapshot = WidgetSnapshot(habits: habits, isWhiteMarble: white, isPro: Entitlements.isPro, allTimelines: plan.timelines)
@@ -350,8 +351,27 @@ enum WidgetBridge {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    /// Records check-ins made with a widget's button while the app was closed. Each one goes through
+    /// the same path as a tap in the app, so the unique check-in key still prevents duplicates, and
+    /// only a day the habit was actually scheduled for can be marked.
+    @MainActor
+    static func ingestPending(plan: Plan, today: DayKey, in context: ModelContext) {
+        guard !DevSandbox.isActive, let data = defaults?.data(forKey: WidgetSnapshot.pendingKey),
+              let queue = try? JSONDecoder().decode([PendingCheckIn].self, from: data), !queue.isEmpty else { return }
+        defaults?.removeObject(forKey: WidgetSnapshot.pendingKey)
+        for change in WidgetInbox.applicable(queue, today: today) {
+            guard let habit = plan.habits.first(where: { $0.id == change.habitID }) else { continue }
+            let timeline = habit.timeline(planStart: plan.start)
+            let status = timeline.status(on: change.day, today: today)
+            guard timeline.contains(change.day), status != .unscheduled, status != .upcoming else { continue }
+            PlanStore.setCompleted(change.completed, habit: habit, day: change.day, in: context)
+        }
+        publish(plan: plan)
+    }
+
     static func clear() {
         guard !DevSandbox.isActive else { return }
+        defaults?.removeObject(forKey: WidgetSnapshot.pendingKey)
         defaults?.removeObject(forKey: WidgetSnapshot.defaultsKey)
         WidgetCenter.shared.reloadAllTimelines()
     }

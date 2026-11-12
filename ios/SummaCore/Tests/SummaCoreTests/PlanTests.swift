@@ -842,3 +842,55 @@ private func profile(focus: [String] = [], objective: String = "", obstacles: [S
         #expect(GraduationRing.blend("nonsense", toward: "#FFFFFF", by: 0.5) == "nonsense")
     }
 }
+
+@Suite struct WidgetInboxTests {
+    private let start = DayKey(year: 2026, month: 1, day: 5) // Monday
+    private func snapshot(weekdays: WeekdaySet = .everyDay) -> (WidgetSnapshot, UUID) {
+        let id = UUID()
+        let timeline = HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: weekdays)], completed: [])
+        let habit = WidgetSnapshot.Habit(id: id, title: "Read daily", colorHex: "#DCAF61", symbol: "book", timeline: timeline, detail: "Two pages")
+        return (WidgetSnapshot(habits: [habit], isWhiteMarble: false, isPro: true, allTimelines: [timeline]), id)
+    }
+
+    @Test func theButtonMarksTodayAndCanUndoIt() {
+        let (snap, id) = snapshot()
+        let today = start.adding(3)
+        guard let done = WidgetInbox.toggling(habitID: id, on: today, in: snap) else { #expect(1 == 2); return }
+        #expect(done.change == PendingCheckIn(habitID: id, day: today, completed: true))
+        #expect(done.snapshot.habits[0].timeline.status(on: today, today: today) == .completed)
+        #expect(done.snapshot.allTimelines?[0].completed.contains(today) == true)
+        guard let undone = WidgetInbox.toggling(habitID: id, on: today, in: done.snapshot) else { #expect(1 == 2); return }
+        #expect(undone.change.completed == false)
+        #expect(undone.snapshot.habits[0].timeline.status(on: today, today: today) == .pending)
+    }
+
+    @Test func aWidgetCannotInventARecord() {
+        let (snap, id) = snapshot(weekdays: .weekdays)
+        #expect(WidgetInbox.toggling(habitID: UUID(), on: start, in: snap) == nil)            // unknown habit
+        #expect(WidgetInbox.toggling(habitID: id, on: start.adding(5), in: snap) == nil)     // Saturday: a rest day
+        #expect(WidgetInbox.toggling(habitID: id, on: start.adding(-1), in: snap) == nil)    // before the plan
+        #expect(WidgetInbox.toggling(habitID: id, on: start.adding(120), in: snap) == nil)   // after the plan
+    }
+
+    @Test func onlyTheNewestAnswerForADayIsKept() {
+        let id = UUID()
+        var queue: [PendingCheckIn] = []
+        queue = WidgetInbox.adding(PendingCheckIn(habitID: id, day: start, completed: true), to: queue)
+        queue = WidgetInbox.adding(PendingCheckIn(habitID: id, day: start, completed: false), to: queue)
+        queue = WidgetInbox.adding(PendingCheckIn(habitID: id, day: start.adding(1), completed: true), to: queue)
+        #expect(queue.count == 2)
+        #expect(queue.first { $0.day == start }?.completed == false)
+        #expect(WidgetInbox.applicable(queue, today: start).count == 1)
+    }
+
+    @Test func olderSnapshotsWithoutDetailStillDecode() throws {
+        let (snap, _) = snapshot()
+        guard var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(snap)) as? [String: Any],
+              var habits = object["habits"] as? [[String: Any]] else { #expect(1 == 2); return }
+        habits[0].removeValue(forKey: "detail")
+        object["habits"] = habits
+        let decoded = try JSONDecoder().decode(WidgetSnapshot.self, from: JSONSerialization.data(withJSONObject: object))
+        #expect(decoded.habits[0].detail == nil)
+        #expect(decoded.habits[0].title == "Read daily")
+    }
+}
