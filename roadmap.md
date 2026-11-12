@@ -28,3 +28,9 @@
 # Uploaded app screens
 - [x] Place supplied screens in the center, onboarding, right, and left phones respectively without changing frames or widgets.
 - [x] Verify screen loading and presentation across desktop and mobile.
+
+# Actual app widgets and heatmaps
+- [x] Replace the widget phone with the uploaded home-screen screenshot.
+- [x] Match the three habit heatmaps to the actual app and preserve independent checkmarks.
+- [x] Add the full-program phone and a green-day-only animated detail sheet using both supplied screenshots.
+- [x] Verify phone interaction, colors, and desktop/mobile presentation.
