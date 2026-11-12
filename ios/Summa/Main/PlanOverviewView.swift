@@ -8,6 +8,7 @@ struct PlanOverviewView: View {
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var clock: TodayClock
     let plan: Plan
+    let openJourney: (JourneySheet) -> Void
 
     @State private var editing: Habit? = nil
     @State private var addingNew = false
@@ -50,6 +51,9 @@ struct PlanOverviewView: View {
                     }
                 }
                 .card()
+
+                Eyebrow("Journey")
+                JourneySection(open: openJourney)
 
                 Eyebrow("Habits")
                 if plan.activeHabits.isEmpty {

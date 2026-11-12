@@ -9,16 +9,70 @@ import WidgetKit
 enum PlanStore {
     @discardableResult
     static func startPlan(from draft: PlanDraft, answers: OnboardingAnswers, remindersOn: Set<UUID>, today: DayKey,
-                          in context: ModelContext) -> Plan {
+                          chapter: Int = 1, in context: ModelContext) -> Plan {
         let plan = Plan(objective: draft.objective, userName: answers.name, username: answers.username, answers: answers,
                         startDay: today, phases: draft.phases, source: draft.source)
+        plan.chapter = chapter
         context.insert(plan)
         for (index, habitDraft) in draft.habits.enumerated() {
             addHabit(habitDraft, to: plan, sortOrder: index, startDay: today,
                      reminderEnabled: remindersOn.contains(habitDraft.id), in: context)
         }
+        ensureMilestones(for: plan, in: context)
         save(context, plan: plan)
         return plan
+    }
+
+    static func nextChapterNumber(in context: ModelContext) -> Int {
+        ((try? context.fetch(FetchDescriptor<Plan>()))?.map(\.chapter).max() ?? 0) + 1
+    }
+
+    /// Creates the day 21, 66, and 90 milestones from the objective if the plan has none yet.
+    static func ensureMilestones(for plan: Plan, in context: ModelContext) {
+        guard plan.milestones.isEmpty else { return }
+        let first = plan.habits.min { $0.sortOrder < $1.sortOrder }
+        for entry in MilestoneBuilder.defaults(objective: plan.objective, firstHabit: first?.title ?? "", target: first?.target ?? "") {
+            let milestone = Milestone(day: entry.day, text: entry.text)
+            context.insert(milestone)
+            milestone.plan = plan
+        }
+        try? context.save()
+    }
+
+    /// Begins the next chapter with the same habits. The finished chapter and its history are kept.
+    @discardableResult
+    static func continueChapter(from old: Plan, today: DayKey, in context: ModelContext) -> Plan {
+        let plan = Plan(objective: old.objective, userName: old.userName, username: old.username, answers: old.answers,
+                        startDay: today, phases: old.phases, source: "continued")
+        plan.chapter = nextChapterNumber(in: context)
+        context.insert(plan)
+        for (index, habit) in old.activeHabits.enumerated() {
+            var draft = habit.asDraft()
+            draft.id = UUID()
+            let copy = addHabit(draft, to: plan, sortOrder: index, startDay: today, reminderEnabled: habit.reminderEnabled, in: context)
+            copy.secondReminderEnabled = habit.secondReminderEnabled
+            copy.secondReminderHour = habit.secondReminderHour
+            copy.secondReminderMinute = habit.secondReminderMinute
+        }
+        ensureMilestones(for: plan, in: context)
+        save(context, plan: plan)
+        return plan
+    }
+
+    static func addPhoto(_ data: Data, milestoneDay: Int?, to plan: Plan, today: DayKey, in context: ModelContext) {
+        guard let fileName = PhotoStore.save(data) else { return }
+        let photo = ProgressPhoto(day: today, milestoneDay: milestoneDay, fileName: fileName)
+        context.insert(photo)
+        photo.plan = plan
+        try? context.save()
+    }
+
+    /// Removes the record and the image file together.
+    static func deletePhoto(_ photo: ProgressPhoto, in context: ModelContext) {
+        PhotoStore.delete(photo.fileName)
+        photo.plan?.photos.removeAll { $0.id == photo.id }
+        context.delete(photo)
+        try? context.save()
     }
 
     @discardableResult
@@ -102,6 +156,7 @@ enum PlanStore {
             plans.forEach { context.delete($0) }
         }
         try? context.save()
+        PhotoStore.deleteAll()
         Reminders.removeAll()
         WidgetBridge.clear()
     }

@@ -161,7 +161,8 @@ struct PlanReviewView: View {
         Haptics.commit()
         clock.refresh()
         PlanStore.startPlan(from: plan, answers: onboarding.answers, remindersOn: onboarding.remindersOn,
-                            today: clock.today, in: context)
+                            today: clock.today, chapter: PlanStore.nextChapterNumber(in: context), in: context)
+        UserDefaults.standard.set(false, forKey: "summa.newChapter")
         onboarding.reset()
     }
 }

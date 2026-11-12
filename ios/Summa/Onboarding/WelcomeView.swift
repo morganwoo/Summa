@@ -114,6 +114,7 @@ private struct FingerprintHold: View {
 struct PathChoiceView: View {
     @Environment(\.theme) private var theme
     @EnvironmentObject private var onboarding: OnboardingStore
+    @AppStorage("summa.newChapter") private var startingNewChapter = false
 
     var body: some View {
         ScrollView {
@@ -145,6 +146,11 @@ struct PathChoiceView: View {
                 Text("About three minutes. Your answers stay on this device until you ask for a plan.")
                     .font(.footnote)
                     .foregroundStyle(theme.muted)
+                if startingNewChapter {
+                    Button("Back to my finished chapter") { startingNewChapter = false }
+                        .buttonStyle(.summaSecondary)
+                        .accessibilityIdentifier("path.cancelChapter")
+                }
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 12)

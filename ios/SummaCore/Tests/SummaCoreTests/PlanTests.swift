@@ -389,3 +389,122 @@ private func profile(focus: [String] = [], objective: String = "", obstacles: [S
         #expect(old.dayNumber(today: start) == nil)
     }
 }
+
+@Suite struct JourneyTests {
+    private func key(_ s: String) -> DayKey { DayKey(s)! }
+    private var start: DayKey { key("2026-11-02") } // a Monday
+
+    private func record(_ title: String, days: WeekdaySet = .everyDay, done: [Int]) -> HabitRecord {
+        HabitRecord(id: UUID(), title: title, minimumVersion: "the minimum",
+                    timeline: HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: days)],
+                                            completed: Set(done.map { start.adding($0) })))
+    }
+
+    @Test func weeksCoverTheNinetyDaysAndAppearOnlyWhenFinished() {
+        #expect(ReportBuilder.range(week: 1, planStart: start) == start...start.adding(6))
+        #expect(ReportBuilder.range(week: 13, planStart: start) == start.adding(84)...start.adding(89))
+        #expect(ReportBuilder.finishedWeeks(planStart: start, today: start.adding(6)).isEmpty)
+        #expect(ReportBuilder.finishedWeeks(planStart: start, today: start.adding(7)) == [1])
+        #expect(ReportBuilder.finishedWeeks(planStart: start, today: start.adding(21)) == [3, 2, 1])
+        #expect(ReportBuilder.finishedWeeks(planStart: start, today: start.adding(89)).count == 12)
+        #expect(ReportBuilder.finishedWeeks(planStart: start, today: start.adding(90)).count == 13)
+    }
+
+    @Test func reportCountsScheduledCompletedAndMissedFromRecords() {
+        let reading = record("Read", done: [0, 1, 2, 3, 4, 5, 6])          // 7 of 7
+        let training = record("Train", days: .weekdays, done: [0, 1])        // 2 of 5
+        let r = ReportBuilder.report(week: 1, habits: [reading, training], today: start.adding(7))
+        #expect(r.scheduled == 12)
+        #expect(r.completed == 9)
+        #expect(r.missed == 3)
+        #expect(r.percent == 75)
+        #expect(r.strongest == "Read")
+        #expect(r.weakest == "Train")
+        #expect(r.previousPercent == nil)
+        #expect(r.change == nil)
+        #expect(r.habitsToReview.isEmpty) // one bad week is not "repeatedly"
+        #expect(r.suggestions.contains { $0.contains("Train") && $0.contains("the minimum") })
+    }
+
+    @Test func comparesWithThePreviousWeekAndFlagsRepeatedMisses() {
+        let reading = record("Read", done: Array(0..<14))
+        let training = record("Train", days: .weekdays, done: [0, 1, 7])     // 2 of 5, then 1 of 5
+        let r = ReportBuilder.report(week: 2, habits: [reading, training], today: start.adding(14))
+        #expect(r.previousPercent == 75)
+        #expect(r.percent == 67)
+        #expect(r.change == -8)
+        #expect(r.habitsToReview == [training.id])
+        #expect(r.suggestions.contains { $0.contains("two weeks running") && $0.contains("Nothing changes unless you edit it") })
+    }
+
+    @Test func aPerfectWeekAndAnEmptyWeekReadSensibly() {
+        let perfect = ReportBuilder.report(week: 1, habits: [record("Read", done: Array(0..<7))], today: start.adding(7))
+        #expect(perfect.percent == 100)
+        #expect(perfect.weakest == nil)
+        #expect(perfect.suggestions == ["A strong week. Keep the schedule exactly as it is."])
+        let empty = ReportBuilder.report(week: 1, habits: [], today: start.adding(7))
+        #expect(empty.percent == nil)
+        #expect(empty.suggestions == ["Nothing was due this week."])
+    }
+
+    @Test func namesTheWeekdayThatCostTheMost() {
+        // Two habits both missed on Friday (index 4) only.
+        let a = record("A", done: [0, 1, 2, 3, 5, 6])
+        let b = record("B", done: [0, 1, 2, 3, 5, 6])
+        let r = ReportBuilder.report(week: 1, habits: [a, b], today: start.adding(7))
+        #expect(r.suggestions.contains { $0.contains("Friday") })
+    }
+
+    @Test func graduationNeedsEightyPercentOfAllScheduledActivities() {
+        func timeline(_ count: Int, days: WeekdaySet = .everyDay) -> HabitTimeline {
+            var t = HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: days)])
+            t.completed = Set(t.days.filter { t.isScheduled($0) }.prefix(count))
+            return t
+        }
+        #expect(Graduation.evaluate(timelines: [timeline(72)]) == GraduationResult(completed: 72, scheduled: 90, percent: 80, eligible: true))
+        let short = Graduation.evaluate(timelines: [timeline(71)])
+        #expect(short.percent == 78)
+        #expect(!short.eligible)
+        // Non-daily habits count only their own scheduled days: 90 daily + 65 weekday occurrences.
+        let mixed = Graduation.evaluate(timelines: [timeline(90), timeline(34, days: .weekdays)])
+        #expect(mixed.scheduled == 155)
+        #expect(mixed.completed == 124)
+        #expect(mixed.eligible)                       // 124/155 is exactly 80%
+        #expect(!Graduation.evaluate(timelines: [timeline(90), timeline(33, days: .weekdays)]).eligible) // 79.4% does not round up
+        #expect(!Graduation.evaluate(timelines: []).eligible)
+    }
+
+    @Test func graduationCountsHistoricalScheduleChangesAndArchivedHabits() {
+        // Daily for 30 days, then weekdays only: the first 30 days still count as daily.
+        var changed = HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: .everyDay),
+                                                              ScheduleRule(effectiveFrom: start.adding(30), weekdays: .weekdays)])
+        let scheduledDays = changed.days.filter { changed.isScheduled($0) }
+        #expect(scheduledDays.count == 30 + 43)
+        changed.completed = Set(scheduledDays)
+        var archived = HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: .everyDay)])
+        archived.archivedOn = start.adding(10) // ten scheduled days, none done
+        let result = Graduation.evaluate(timelines: [changed, archived])
+        #expect(result.scheduled == 83)
+        #expect(result.completed == 73)
+        #expect(result.eligible) // 88%
+    }
+
+    @Test func graduationIsEvaluatedOnceDayNinetyIsFinished() {
+        var t = HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: .everyDay)])
+        let last = start.adding(89)
+        #expect(!Graduation.isDue(timelines: [t], planStart: start, today: last.adding(-1)))
+        #expect(!Graduation.isDue(timelines: [t], planStart: start, today: last))      // day 90 still open
+        t.completed = [last]
+        #expect(Graduation.isDue(timelines: [t], planStart: start, today: last))       // all of day 90 done
+        t.completed = []
+        #expect(Graduation.isDue(timelines: [t], planStart: start, today: last.adding(1)))
+    }
+
+    @Test func milestonesUseThePersonsObjective() {
+        let m = MilestoneBuilder.defaults(objective: "Run a 10k", firstHabit: "Train the body", target: "20 minutes")
+        #expect(m.map { $0.day } == [21, 66, 90])
+        #expect(m.allSatisfy { $0.text.contains("Run a 10k") })
+        #expect(m[0].text.contains("Train the body") && m[0].text.contains("20 minutes"))
+        #expect(MilestoneBuilder.defaults(objective: " ", firstHabit: "", target: "")[2].text.contains("your objective"))
+    }
+}

@@ -16,7 +16,13 @@ final class Plan {
     var username: String = ""
     /// The onboarding answers this plan was built from, kept for later recommendations.
     var answersData: Data = Data()
+    /// 1 for the first 90 days, 2 for the next chapter, and so on. Earlier chapters are kept.
+    var chapter: Int = 1
+    /// Set once the day-90 result has been shown, so it is not presented again unasked.
+    var graduationSeen: Bool = false
     @Relationship(deleteRule: .cascade, inverse: \Habit.plan) var habits: [Habit] = []
+    @Relationship(deleteRule: .cascade, inverse: \Milestone.plan) var milestones: [Milestone] = []
+    @Relationship(deleteRule: .cascade, inverse: \ProgressPhoto.plan) var photos: [ProgressPhoto] = []
 
     init(objective: String, userName: String, username: String = "", answers: OnboardingAnswers? = nil,
          startDay: DayKey, phases: [PhaseDraft], source: String) {
@@ -41,6 +47,17 @@ final class Plan {
     var answers: OnboardingAnswers {
         (try? JSONDecoder().decode(OnboardingAnswers.self, from: answersData)) ?? OnboardingAnswers()
     }
+
+    /// Every habit with its record, for reports and graduation.
+    var records: [HabitRecord] {
+        let start = self.start
+        return habits.sorted { $0.sortOrder < $1.sortOrder }.map {
+            HabitRecord(id: $0.id, title: $0.title, minimumVersion: $0.minimumVersion, timeline: $0.timeline(planStart: start))
+        }
+    }
+
+    var sortedMilestones: [Milestone] { milestones.sorted { $0.day < $1.day } }
+    var sortedPhotos: [ProgressPhoto] { photos.sorted { $0.addedAt < $1.addedAt } }
 
     var activeHabits: [Habit] {
         habits.filter { $0.archivedDay == nil }.sorted { $0.sortOrder < $1.sortOrder }
@@ -165,6 +182,40 @@ final class CheckIn {
     }
 }
 
+/// A personal marker at day 21, 66, or 90. The text is the person's own and can be rewritten.
+@Model
+final class Milestone {
+    var day: Int
+    var text: String
+    var reached: Bool = false
+    var plan: Plan?
+
+    init(day: Int, text: String) {
+        self.day = day
+        self.text = text
+    }
+}
+
+/// A private progress photo. The image file lives in the app's protected storage on this device.
+@Model
+final class ProgressPhoto {
+    @Attribute(.unique) var id: UUID
+    var day: String
+    /// 21, 66, or 90 when taken for a milestone.
+    var milestoneDay: Int?
+    var fileName: String
+    var addedAt: Date
+    var plan: Plan?
+
+    init(day: DayKey, milestoneDay: Int?, fileName: String) {
+        self.id = UUID()
+        self.day = day.string
+        self.milestoneDay = milestoneDay
+        self.fileName = fileName
+        self.addedAt = Date()
+    }
+}
+
 enum SummaSchema {
-    static let models: [any PersistentModel.Type] = [Plan.self, Habit.self, ScheduleVersion.self, CheckIn.self]
+    static let models: [any PersistentModel.Type] = [Plan.self, Habit.self, ScheduleVersion.self, CheckIn.self, Milestone.self, ProgressPhoto.self]
 }

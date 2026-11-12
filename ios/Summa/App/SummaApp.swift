@@ -51,11 +51,13 @@ struct RootView: View {
     @EnvironmentObject private var clock: TodayClock
     @Query(sort: \Plan.createdAt, order: .reverse) private var plans: [Plan]
     @State private var paywall: PaywallContext? = nil
+    /// True while someone with a finished chapter is setting up the next one.
+    @AppStorage("summa.newChapter") private var startingNewChapter = false
 
     var body: some View {
         ZStack {
             MarbleBackground()
-            if let plan = plans.first {
+            if let plan = plans.first, !startingNewChapter {
                 MainTabView(plan: plan)
                     .transition(.opacity)
             } else {

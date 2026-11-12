@@ -11,6 +11,7 @@ struct HeatmapsView: View {
     let plan: Plan
     let openProgress: (Habit) -> Void
     let openPlan: () -> Void
+    let openJourney: (JourneySheet) -> Void
 
     @State private var undoTarget: Habit? = nil
     @State private var undoToken = 0
@@ -38,6 +39,22 @@ struct HeatmapsView: View {
                         OverallLegend()
                     }
                     .card()
+                }
+                if let week = ReportMemory.unseenWeek(for: plan, today: today) {
+                    Button { openJourney(.reports) } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "doc.text").foregroundStyle(theme.gold)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Your week \(week) report is ready").font(.headline).foregroundStyle(theme.text)
+                                Text("Built from what you checked in.").font(.footnote).foregroundStyle(theme.muted)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.footnote).foregroundStyle(theme.muted)
+                        }
+                        .card(padding: 14)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("report.ready")
                 }
                 if plan.isFinished(today: today) {
                     finished
@@ -110,8 +127,11 @@ struct HeatmapsView: View {
             Eyebrow("Ninety days", color: theme.gold)
             Text("The plan is complete. The record stands.")
                 .font(SummaFont.serif(24, relativeTo: .title3))
-            Text("Review what you practiced in Progress, or begin a new 90 days from Settings.")
+            Text("See your result, then choose a new chapter or continue with the same habits.")
                 .font(.subheadline).foregroundStyle(theme.muted)
+            Button("Open my day-90 result") { openJourney(.graduation) }
+                .buttonStyle(.summaPrimary)
+                .accessibilityIdentifier("finished.result")
         }
         .card()
     }
@@ -161,6 +181,10 @@ struct HeatmapsView: View {
             undoTarget = nil
         } else {
             Haptics.complete()
+            // Finishing everything due on day 90 is the moment graduation is evaluated.
+            if !plan.graduationSeen, Graduation.isDue(timelines: plan.timelines, planStart: plan.start, today: today) {
+                openJourney(.graduation)
+            }
             undoTarget = habit
             undoToken += 1
             let token = undoToken

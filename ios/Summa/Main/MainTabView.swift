@@ -7,12 +7,14 @@ struct MainTabView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var clock: TodayClock
     @EnvironmentObject private var store: Store
+    @Environment(\.modelContext) private var context
     let plan: Plan
 
     private enum Screen: Hashable { case heatmaps, progress, plan, settings }
     @State private var tab: Screen = .heatmaps
     @State private var selectedHabitID: UUID? = nil
     @State private var celebrating: Stage? = nil
+    @State private var journey: JourneySheet? = nil
 
     var body: some View {
         let stage = plan.stage(today: clock.today)
@@ -23,7 +25,8 @@ struct MainTabView: View {
                              selectedHabitID = habit.id
                              tab = .progress
                          },
-                         openPlan: { tab = .plan })
+                         openPlan: { tab = .plan },
+                         openJourney: { journey = $0 })
                 .background(StageBackground(stage: stage))
                 .tabItem { Label("Heatmaps", systemImage: "square.grid.3x3.fill") }
                 .tag(Screen.heatmaps)
@@ -33,7 +36,7 @@ struct MainTabView: View {
                 .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
                 .tag(Screen.progress)
 
-            PlanOverviewView(plan: plan)
+            PlanOverviewView(plan: plan, openJourney: { journey = $0 })
                 .background(StageBackground(stage: stage))
                 .tabItem { Label("Plan", systemImage: "scroll") }
                 .tag(Screen.plan)
@@ -58,12 +61,21 @@ struct MainTabView: View {
                     .transition(.opacity)
             }
         }
+        .sheet(item: $journey) { sheet in
+            JourneyHost(sheet: sheet, plan: plan).environment(\.theme, theme)
+        }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: celebrating)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: stage)
         .onAppear {
             WidgetBridge.publish(plan: plan)
             Reminders.sync(plan: plan)
             celebrating = StageMemory.stageToCelebrate(for: plan, today: clock.today)
+            PlanStore.ensureMilestones(for: plan, in: context)
+            // The day-90 result is shown once, unasked; after that it lives under Plan > Graduation.
+            if celebrating == nil, !plan.graduationSeen,
+               Graduation.isDue(timelines: plan.timelines, planStart: plan.start, today: clock.today) {
+                journey = .graduation
+            }
         }
         .onChange(of: store.isPro) { _, _ in
             // A purchase, restore, expiry, or refund changes what widgets and reminders may do.
