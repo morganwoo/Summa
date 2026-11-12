@@ -34,3 +34,8 @@
 - [x] Match the three habit heatmaps to the actual app and preserve independent checkmarks.
 - [x] Add the full-program phone and a green-day-only animated detail sheet using both supplied screenshots.
 - [x] Verify phone interaction, colors, and desktop/mobile presentation.
+
+# Yellow book preview
+- [x] Open the supplied detail screenshot only from the yellow book, preserving the green-day interaction.
+- [x] Add restrained curved arrows from the try-me text to both interactive targets.
+- [x] Verify both popups and closing behavior on desktop and mobile.

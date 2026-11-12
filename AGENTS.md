@@ -35,4 +35,4 @@ use the editor.
 - Normalize the habit curve path length so the scroll-triggered drawing reaches each milestone consistently and remains visible with reduced motion.
 
 - Display uploaded app screenshots inside the shared phone frame without duplicate status bars or islands; crop only the uploaded outer hardware to preserve screen content.
-- Keep the program-day preview as an in-phone screenshot-backed sheet opened only by the highlighted day; percentage hit targets preserve alignment as the phone resizes.
+- Keep program previews as in-phone screenshot-backed sheets opened only by their highlighted day or book targets; percentage hit targets preserve alignment and closing restores focus to the initiating target.
