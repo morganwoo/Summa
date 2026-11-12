@@ -25,3 +25,17 @@
 - [x] Space the homepage phones and add a restrained hover fan with enlargement.
 - [x] Rename the app and project to Summa.
 - [x] Verify the presentation and hover behavior across screen sizes.
+# Uploaded app screens
+- [x] Place supplied screens in the center, onboarding, right, and left phones respectively without changing frames or widgets.
+- [x] Verify screen loading and presentation across desktop and mobile.
+
+# Actual app widgets and heatmaps
+- [x] Replace the widget phone with the uploaded home-screen screenshot.
+- [x] Match the three habit heatmaps to the actual app and preserve independent checkmarks.
+- [x] Add the full-program phone and a green-day-only animated detail sheet using both supplied screenshots.
+- [x] Verify phone interaction, colors, and desktop/mobile presentation.
+
+# Yellow book preview
+- [x] Open the supplied detail screenshot only from the yellow book, preserving the green-day interaction.
+- [x] Add restrained curved arrows from the try-me text to both interactive targets.
+- [x] Verify both popups and closing behavior on desktop and mobile.

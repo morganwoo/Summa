@@ -3,6 +3,7 @@ import seneca from "@/assets/statue-seneca.jpg";
 import { SiteShell } from "@/components/SiteShell";
 import { Reveal } from "@/components/Reveal";
 import { Heatmap } from "@/components/Heatmap";
+import { ProgramPhone } from "@/components/ProgramPhone";
 import { HabitCurve } from "@/components/HabitCurve";
 import { ReviewCarousel } from "@/components/ReviewCarousel";
 import { StoreButtons } from "@/components/StoreButtons";
@@ -40,14 +41,8 @@ function Index() {
       <WidgetsSection />
 
       {/* Heatmap */}
-      <section className="mx-auto grid max-w-6xl items-center gap-16 px-6 py-40 md:grid-cols-2">
-        <Reveal>
-          <p className="eyebrow mb-6">The daily practice</p>
-          <h2 className="title-roman text-3xl md:text-4xl">The heatmap does not lie.</h2>
-          <p className="mt-6 font-serif text-xl text-muted-foreground">
-            Every square is a day. Ninety of them. Tap once to mark it kept. Over weeks, the grid becomes a portrait of who you are becoming — written in gold, or left in shadow.
-          </p>
-        </Reveal>
+      <section aria-label="Daily practice and ninety-day heatmaps" className="mx-auto grid max-w-6xl items-start gap-16 px-6 py-24 md:grid-cols-2 md:py-32">
+        <Reveal><ProgramPhone /></Reveal>
         <Reveal><Heatmap /></Reveal>
       </section>
 
