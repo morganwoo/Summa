@@ -35,7 +35,7 @@ describe("program day preview", () => {
     expect(book).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "Open Foundation day 1" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("dialog", { name: "Yellow book reflection details" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Done, close day details" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close reflection preview" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(book).toHaveFocus();
   });
