@@ -201,16 +201,16 @@
 .widget-home-brand { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--marble); font-family: var(--font-display); font-size: 10px; }
 .widget-phone .widget-preview { padding: 12px; box-shadow: none; border-radius: 19px; background: var(--secondary); }
 .widget-phone .widget-small { height: 126px; }
-.widget-phone .widget-small { width: auto; }
+.widget-phone .widget-small { width: 100%; }
 .widget-phone .widget-small .mini-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 2px; }
 .widget-phone .widget-wide .mini-grid { grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 2px; }
-.widget-phone .widget-wide { padding: 14px; min-height: 140px; }
+.widget-phone .widget-wide { padding: 14px; min-height: 126px; }
 .widget-heading { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; font-size: 10px; }
 .widget-caption { margin-top: 8px; font-size: 7px; color: var(--muted-foreground); }
 .widget-phone .widget-check { margin-left: auto; width: 20px; height: 20px; border-radius: 4px; }
 .widget-phone .widget-strip { width: 100%; margin-top: 14px; padding: 14px; }
 .widget-phone .weekly-row { grid-template-columns: 16px repeat(7, minmax(0, 1fr)); gap: 5px; margin-bottom: 7px; font-size: 7px; }
-.widget-phone .weekly-cell { border-radius: 3px; aspect-ratio: 1; }
+.widget-phone .weekly-cell { border-radius: 3px; aspect-ratio: 1.25; }
 .home-app-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px 9px; align-content: start; }
 .home-app { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .home-app-icon { width: 43px; height: 43px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--ios-ink); box-shadow: inset 0 1px 1px var(--ios-glass); }
@@ -226,7 +226,7 @@
 .app-messages svg, .app-phone svg { fill: var(--ios-ink); }
 .home-app-label, .widget-app-label { font-size: 9px; color: var(--ios-ink); text-align: center; }
 .widget-app-label { margin-top: 5px; }
-.home-search { display: flex; align-items: center; justify-content: center; gap: 4px; width: fit-content; margin: 17px auto 13px; padding: 4px 10px; border-radius: 20px; background: var(--ios-glass); color: var(--ios-ink); font-size: 9px; backdrop-filter: blur(12px); }
+.home-search { display: flex; align-items: center; justify-content: center; gap: 4px; width: fit-content; margin: 12px auto 10px; padding: 4px 10px; border-radius: 20px; background: var(--ios-glass); color: var(--ios-ink); font-size: 9px; backdrop-filter: blur(12px); }
 .widget-page-dots { display: flex; justify-content: center; gap: 5px; margin-top: 17px; }
 .widget-page-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--muted-foreground); }
 .widget-page-dots span:first-child { background: var(--marble); }
@@ -244,7 +244,7 @@
 .weekly-cell.kept { background: var(--week-ink); }
 @media (min-width: 768px) and (max-height: 900px) {
   .product-opening { padding-top: 105px; padding-bottom: 30px; }
-  .phone-trio { zoom: .72; margin-top: 26px; }
+  .phone-trio { zoom: .67; margin-top: 26px; }
   .product-opening > div + div { margin-top: 14px; }
 }
 @media (max-width: 767px) {
