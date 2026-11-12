@@ -1,5 +1,4 @@
-# Website iteration
-- [x] Add a scroll-driven split marble head, zoom, and emerging quote.
-- [x] Remove numbered principles and simplify the heatmap section.
-- [x] Enlarge all three heatmaps, synchronize completion, and offer gold and marble themes.
-- [x] Verify scrolling and controls on desktop and mobile.
+# Restore original website
+- [ ] Restore the original page, typography, heatmap size, and gold-only appearance.
+- [ ] Keep interactive checkmarks scoped to their assigned heatmaps.
+- [ ] Verify restoration and independent completion.

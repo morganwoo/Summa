@@ -1,7 +1,6 @@
 export const HEATMAP_DAYS = 90;
 export const HABIT_COUNT = 3;
 
-export function toggleLatestDay(completed: readonly boolean[]): boolean[] {
-  const next = !completed.every(Boolean);
-  return Array.from({ length: HABIT_COUNT }, () => next);
+export function toggleLatestDay(completed: readonly boolean[], habitIndex: number): boolean[] {
+  return completed.map((value, index) => index === habitIndex ? !value : value);
 }
