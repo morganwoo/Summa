@@ -103,7 +103,7 @@ struct TalkOnboardingView: View {
     @ViewBuilder
     private func inlineCard(for question: Question) -> some View {
         switch question.kind {
-        case .shortText, .longText:
+        case .shortText, .longText, .username:
             EmptyView()
         case .single:
             QuestionInput(question: question, showsCustomField: false, onSinglePick: { advance() })
@@ -114,7 +114,7 @@ struct TalkOnboardingView: View {
 
     private func isTextual(_ question: Question) -> Bool {
         switch question.kind {
-        case .shortText, .longText: return true
+        case .shortText, .longText, .username: return true
         case .multi(_, let allowsCustom): return allowsCustom
         default: return false
         }
@@ -152,6 +152,9 @@ struct TalkOnboardingView: View {
                         .accessibilityLabel(dictation.isRecording ? "Stop dictation" : "Start dictation")
                     }
                 }
+                if question.id == .username {
+                    UsernameStatus(text: draft).frame(maxWidth: .infinity, alignment: .leading)
+                }
                 if dictation.isRecording {
                     Text("Your words appear above. Edit them before you send.")
                         .font(.caption).foregroundStyle(theme.muted)
@@ -183,14 +186,15 @@ struct TalkOnboardingView: View {
 
     private func prefill(for question: Question) -> String {
         switch question.kind {
-        case .shortText, .longText: return onboarding.answers.text(question.id)
+        case .shortText, .longText, .username: return onboarding.answers.text(question.id)
         default: return ""
         }
     }
 
     private func canSend(_ question: Question) -> Bool {
+        if question.id == .username { return UsernameRule.problem(with: draft) == nil }
         switch question.kind {
-        case .shortText, .longText: return question.isOptional || !draft.trimmed.isEmpty
+        case .shortText, .longText, .username: return question.isOptional || !draft.trimmed.isEmpty
         case .multi: return !draft.trimmed.isEmpty || onboarding.canContinue
         default: return onboarding.canContinue
         }
@@ -199,7 +203,7 @@ struct TalkOnboardingView: View {
     private func sendTitle(_ question: Question) -> String {
         if OnboardingFlow.next(after: question.id, answers: onboarding.answers) == nil { return "Build my plan" }
         switch question.kind {
-        case .shortText, .longText: return draft.trimmed.isEmpty && question.isOptional ? "Skip" : "Send"
+        case .shortText, .longText, .username: return draft.trimmed.isEmpty && question.isOptional ? "Skip" : "Send"
         default: return "Continue"
         }
     }
@@ -207,7 +211,7 @@ struct TalkOnboardingView: View {
     private func send(_ question: Question) {
         dictation.stop()
         switch question.kind {
-        case .shortText, .longText:
+        case .shortText, .longText, .username:
             onboarding.answers.set(question.id, text: draft)
         case .multi:
             if !draft.trimmed.isEmpty {

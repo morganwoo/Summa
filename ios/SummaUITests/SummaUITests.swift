@@ -39,6 +39,7 @@ final class SummaUITests: XCTestCase {
         tap(app, "welcome.continue")
         tap(app, "path.guided")
         type(app, "Alex"); next(app)
+        type(app, "alex_k"); next(app)
         tap(app, "option.I want more discipline"); next(app)
         tap(app, "option.Reading"); tap(app, "option.Reflection"); next(app)
         type(app, "Read four books"); next(app)
@@ -94,6 +95,25 @@ final class SummaUITests: XCTestCase {
         tap(app, "generating.viewPlan")
         XCTAssertTrue(element(app, "review.begin").waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Made for your life, Alex."].exists)
+    }
+
+    func testPlanStartsWithExactlyThreeHabitsAndFreeTierStopsAtThree() {
+        let app = launch()
+        answerGuidedQuestions(app)
+        tap(app, "generating.viewPlan")
+        XCTAssertTrue(element(app, "review.begin").waitForExistence(timeout: 10))
+        let suggestions = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'review.regenerate.'"))
+        XCTAssertEqual(suggestions.count, 3)
+        // Swapping one suggestion leaves three.
+        tap(app, "review.regenerate.Evening review")
+        XCTAssertFalse(element(app, "review.regenerate.Evening review").exists)
+        XCTAssertEqual(suggestions.count, 3)
+        tap(app, "review.begin")
+        XCTAssertTrue(element(app, "checkin.Read daily").waitForExistence(timeout: 10))
+        // A fourth active habit is held back on the free tier.
+        app.tabBars.buttons["Plan"].tap()
+        tap(app, "plan.addHabit")
+        XCTAssertTrue(element(app, "limit.notice").waitForExistence(timeout: 5))
     }
 
     func testCheckInSurvivesRelaunch() {

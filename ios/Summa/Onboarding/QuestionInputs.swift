@@ -214,6 +214,22 @@ struct ArcChart: View {
     }
 }
 
+/// Says what to fix in a username, or confirms that it is valid.
+struct UsernameStatus: View {
+    @Environment(\.theme) private var theme
+    let text: String
+
+    var body: some View {
+        if !text.trimmed.isEmpty {
+            let problem = UsernameRule.problem(with: text)
+            Label(problem ?? "@\(UsernameRule.normalized(text)) looks good.", systemImage: problem == nil ? "checkmark.circle" : "exclamationmark.circle")
+                .font(.footnote)
+                .foregroundStyle(problem == nil ? theme.gold : theme.muted)
+                .accessibilityIdentifier("username.status")
+        }
+    }
+}
+
 /// Renders the right control for a question. Shared by the guided path and the talk path's cards.
 struct QuestionInput: View {
     @Environment(\.theme) private var theme
@@ -238,6 +254,23 @@ struct QuestionInput: View {
                 .background(theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(theme.divider))
                 .accessibilityIdentifier("onboarding.textField")
+        case .username:
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("username", text: onboarding.textBinding(for: question.id))
+                    .font(.title3)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.asciiCapable)
+                    .submitLabel(.done)
+                    .focused($focused)
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 56)
+                    .background(theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(theme.divider))
+                    .accessibilityLabel("Username")
+                    .accessibilityIdentifier("onboarding.textField")
+                UsernameStatus(text: onboarding.answers.text(.username))
+            }
         case .longText(let placeholder):
             TextField(placeholder, text: onboarding.textBinding(for: question.id), axis: .vertical)
                 .lineLimit(4...10)

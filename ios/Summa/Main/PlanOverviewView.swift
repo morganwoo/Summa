@@ -12,6 +12,7 @@ struct PlanOverviewView: View {
     @State private var editing: Habit? = nil
     @State private var addingNew = false
     @State private var archiving: Habit? = nil
+    @State private var showLimit = false
 
     var body: some View {
         let today = clock.today
@@ -56,7 +57,7 @@ struct PlanOverviewView: View {
                     habitRow(habit)
                 }
                 Button {
-                    addingNew = true
+                    if PlanStore.canAddHabit(to: plan) { addingNew = true } else { showLimit = true }
                 } label: {
                     Label("Add a habit", systemImage: "plus")
                 }
@@ -73,7 +74,9 @@ struct PlanOverviewView: View {
                                 Text("History kept. No longer scheduled.").font(.footnote).foregroundStyle(theme.muted)
                             }
                             Spacer()
-                            Button("Restore") { PlanStore.restore(habit, in: context) }
+                            Button("Restore") {
+                                if PlanStore.canAddHabit(to: plan) { PlanStore.restore(habit, in: context) } else { showLimit = true }
+                            }
                                 .font(.subheadline.weight(.semibold)).foregroundStyle(theme.gold).frame(minHeight: 44)
                         }
                         .card(padding: 14)
@@ -101,6 +104,11 @@ struct PlanOverviewView: View {
                 PlanStore.save(context, plan: plan)
             }
             .environment(\.theme, theme)
+        }
+        .sheet(isPresented: $showLimit) {
+            HabitLimitNotice()
+                .environment(\.theme, theme)
+                .presentationDetents([.medium])
         }
         .confirmationDialog("Archive this habit?", isPresented: Binding(get: { archiving != nil }, set: { if !$0 { archiving = nil } }),
                             titleVisibility: .visible) {
@@ -131,7 +139,7 @@ struct PlanOverviewView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(habit.title).font(SummaFont.serif(24, relativeTo: .title3))
                     Text(habit.action).font(.subheadline)
-                    Text("\(OnboardingFlow.describe(weekdays: habit.currentWeekdays)) · Minimum: \(habit.minimumVersion)")
+                    Text((habit.target.isEmpty ? "" : "Target: \(habit.target) · ") + "\(OnboardingFlow.describe(weekdays: habit.currentWeekdays)) · Minimum: \(habit.minimumVersion)")
                         .font(.footnote).foregroundStyle(theme.muted)
                     if habit.reminderEnabled {
                         Label("Reminder at \(Reminders.timeString(hour: habit.reminderHour, minute: habit.reminderMinute))", systemImage: "bell.fill")
@@ -151,5 +159,35 @@ struct PlanOverviewView: View {
             }
         }
         .card()
+    }
+}
+
+/// Shown when a free account tries to hold a fourth active habit. This is where the
+/// Summa Pro subscription page will be presented once subscriptions exist.
+struct HabitLimitNotice: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Eyebrow("Summa Free", color: theme.gold)
+            Text("Three active habits at a time.")
+                .font(SummaFont.serif(30, relativeTo: .title))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Text("Archive a habit to make room for another. Its history stays in Progress.")
+                .font(.body)
+            Text("Summa Pro will lift this limit. It is not available to buy yet.")
+                .font(.footnote).foregroundStyle(theme.muted)
+            Spacer(minLength: 0)
+            Button("OK") { dismiss() }
+                .buttonStyle(.summaPrimary)
+                .accessibilityIdentifier("limit.ok")
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .marbleBackground()
+        .foregroundStyle(theme.text)
+        .accessibilityIdentifier("limit.notice")
     }
 }

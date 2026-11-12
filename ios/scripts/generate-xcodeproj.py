@@ -39,7 +39,6 @@ app = {
     "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon", "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
     "CODE_SIGN_ENTITLEMENTS": "Config/Summa.entitlements", "GENERATE_INFOPLIST_FILE": "YES",
     "INFOPLIST_FILE": "Config/Summa-Info.plist", "INFOPLIST_KEY_UIApplicationSceneManifest_Generation": "YES",
-    "INFOPLIST_KEY_UILaunchScreen_Generation": "YES",
     "INFOPLIST_KEY_UISupportedInterfaceOrientations": "UIInterfaceOrientationPortrait",
     "LD_RUNPATH_SEARCH_PATHS": ["$(inherited)", "@executable_path/Frameworks"],
     "PRODUCT_BUNDLE_IDENTIFIER": BUNDLE, "PRODUCT_NAME": "$(TARGET_NAME)", "SWIFT_EMIT_LOC_STRINGS": "YES",

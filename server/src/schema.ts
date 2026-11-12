@@ -4,7 +4,7 @@ import { z } from "zod";
 export const SCHEMA_VERSION = 1;
 
 const QUESTION_IDS = [
-  "name", "motivation", "focus", "objective", "obstacles", "arc", "minutes", "days",
+  "name", "username", "motivation", "focus", "objective", "obstacles", "arc", "minutes", "days",
   "timeOfDay", "startSize", "body", "future", "extra",
 ] as const;
 
@@ -28,6 +28,10 @@ const habitSchema = z
     title: text(60),
     action: text(200),
     minimumVersion: text(200),
+    /** Measurable amount for one occurrence, e.g. "10 pages". */
+    target: text(60),
+    /** Why this habit fits this person, in terms of their answers. */
+    reason: text(300),
     weekdays: z
       .array(z.number().int().min(1).max(7))
       .min(1)
@@ -49,7 +53,7 @@ export const planSchema = z
   .object({
     schemaVersion: z.literal(SCHEMA_VERSION),
     objective: text(280),
-    habits: z.array(habitSchema).min(2).max(4),
+    habits: z.array(habitSchema).length(3),
     phases: z.array(phaseSchema).length(3),
   })
   .strict()

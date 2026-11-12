@@ -1,11 +1,13 @@
 import Foundation
 
 public enum QuestionID: String, Codable, CaseIterable, Sendable {
-    case name, motivation, focus, objective, obstacles, arc, minutes, days, timeOfDay, startSize, body, future, extra
+    case name, username, motivation, focus, objective, obstacles, arc, minutes, days, timeOfDay, startSize, body, future, extra
 }
 
 public enum QuestionKind: Equatable, Sendable {
     case shortText(placeholder: String)
+    /// A handle with live validation. Global uniqueness is enforced once accounts exist.
+    case username
     case longText(placeholder: String)
     case single(options: [String])
     case multi(options: [String], allowsCustom: Bool)
@@ -47,6 +49,7 @@ public struct OnboardingAnswers: Codable, Equatable, Sendable {
     public func isAnswered(_ id: QuestionID) -> Bool { !selections(id).isEmpty }
 
     public var name: String { text(.name) }
+    public var username: String { UsernameRule.normalized(text(.username)) }
     public var focusAreas: [String] { selections(.focus) }
 
     public var minutesPerDay: Int {
@@ -73,6 +76,10 @@ public enum OnboardingFlow {
         case .name:
             return Question(id: id, prompt: "Hi, I’m Summa. What should I call you?", detail: nil,
                             kind: .shortText(placeholder: "Your name"), isOptional: false)
+        case .username:
+            return Question(id: id, prompt: "Choose a username\(name).",
+                            detail: "3 to 20 characters: lowercase letters, numbers, and underscores, starting with a letter. Friends will find you by it later.",
+                            kind: .username, isOptional: false)
         case .motivation:
             return Question(id: id, prompt: "What brought you here\(name)?", detail: "Choose any that fit.",
                             kind: .multi(options: ["I keep starting over", "I want more discipline", "A new chapter is beginning",
@@ -115,8 +122,8 @@ public enum OnboardingFlow {
                             detail: "You chose a goal that involves your body. Age, height, weight, and gender help set a sensible starting effort. Skip any or all of them.",
                             kind: .body, isOptional: true)
         case .future:
-            return Question(id: id, prompt: "Imagine a typical day three years from now. Who have you become, and what do you do differently?",
-                            detail: nil, kind: .longText(placeholder: "Three years from now, a typical day…"), isOptional: false)
+            return Question(id: id, prompt: "When these 90 days end, who do you want to be, and what does an ordinary day look like?",
+                            detail: "Your own words shape the plan.", kind: .longText(placeholder: "On day 90 I am someone who…"), isOptional: false)
         case .extra:
             return Question(id: id, prompt: "Anything else I should know before I build your plan?", detail: "Optional.",
                             kind: .longText(placeholder: "Injuries, shift work, a newborn, a deadline…"), isOptional: true)
@@ -132,6 +139,7 @@ public enum OnboardingFlow {
         let q = question(id, answers: answers)
         if q.isOptional { return true }
         if id == .days { return true }
+        if id == .username { return UsernameRule.problem(with: answers.text(.username)) == nil }
         return answers.isAnswered(id)
     }
 
@@ -165,5 +173,28 @@ public enum OnboardingFlow {
         // Read Monday-first.
         let ordered = days.sorted { ($0 + 5) % 7 < ($1 + 5) % 7 }
         return ordered.map { weekdaySymbols[$0 - 1] }.joined(separator: ", ")
+    }
+}
+
+/// Local username rules. The server will also enforce global uniqueness when accounts arrive.
+public enum UsernameRule {
+    public static let minLength = 3
+    public static let maxLength = 20
+    static let reserved: Set<String> = ["summa", "admin", "support", "help", "root", "system", "official", "moderator"]
+
+    public static func normalized(_ raw: String) -> String { raw.trimmed.lowercased() }
+
+    /// Nil when valid; otherwise a short sentence saying what to fix.
+    public static func problem(with raw: String) -> String? {
+        let name = normalized(raw)
+        if name.isEmpty { return "Enter a username." }
+        if name.count < minLength { return "Use at least \(minLength) characters." }
+        if name.count > maxLength { return "Use \(maxLength) characters or fewer." }
+        let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789_")
+        if !name.allSatisfy({ allowed.contains($0) }) { return "Use only lowercase letters, numbers, and underscores." }
+        if let first = name.first, !("a"..."z").contains(first) { return "Start with a letter." }
+        if name.hasSuffix("_") || name.contains("__") { return "Underscores cannot end the name or sit side by side." }
+        if reserved.contains(name) { return "That name is reserved. Try another." }
+        return nil
     }
 }

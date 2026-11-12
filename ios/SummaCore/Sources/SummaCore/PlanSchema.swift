@@ -4,8 +4,8 @@ import Foundation
 /// The server validates model output against the same shape before returning it.
 public enum PlanSchema {
     public static let version = 1
-    public static let minHabits = 2
-    public static let maxHabits = 4
+    /// Every new plan starts with exactly this many habits.
+    public static let initialHabits = 3
     public static let planLength = 90
 }
 
@@ -22,19 +22,24 @@ public struct HabitDraft: Codable, Hashable, Sendable, Identifiable {
     public var action: String
     /// The smallest version that still counts on a difficult day.
     public var minimumVersion: String
+    /// The measurable amount for one occurrence, e.g. "10 pages" or "20 minutes".
+    public var target: String
+    /// One or two sentences tying this habit to what the person said in onboarding.
+    public var reason: String
     /// `Calendar` weekdays, 1 = Sunday … 7 = Saturday.
     public var weekdays: [Int]
     public var reminder: ReminderDraft?
     public var colorHex: String
     public var symbol: String
 
-    public init(id: UUID = UUID(), title: String, action: String, minimumVersion: String, weekdays: [Int],
-                reminder: ReminderDraft? = nil, colorHex: String = HabitPalette.gold, symbol: String = "circle") {
+    public init(id: UUID = UUID(), title: String, action: String, minimumVersion: String, target: String = "", reason: String = "",
+                weekdays: [Int], reminder: ReminderDraft? = nil, colorHex: String = HabitPalette.gold, symbol: String = "circle") {
         self.id = id; self.title = title; self.action = action; self.minimumVersion = minimumVersion
+        self.target = target; self.reason = reason
         self.weekdays = weekdays; self.reminder = reminder; self.colorHex = colorHex; self.symbol = symbol
     }
 
-    enum CodingKeys: String, CodingKey { case id, title, action, minimumVersion, weekdays, reminder, colorHex, symbol }
+    enum CodingKeys: String, CodingKey { case id, title, action, minimumVersion, target, reason, weekdays, reminder, colorHex, symbol }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -42,6 +47,8 @@ public struct HabitDraft: Codable, Hashable, Sendable, Identifiable {
         title = try c.decode(String.self, forKey: .title)
         action = try c.decode(String.self, forKey: .action)
         minimumVersion = try c.decode(String.self, forKey: .minimumVersion)
+        target = try c.decodeIfPresent(String.self, forKey: .target) ?? ""
+        reason = try c.decodeIfPresent(String.self, forKey: .reason) ?? ""
         weekdays = try c.decode([Int].self, forKey: .weekdays)
         reminder = try c.decodeIfPresent(ReminderDraft.self, forKey: .reminder)
         colorHex = try c.decodeIfPresent(String.self, forKey: .colorHex) ?? HabitPalette.gold
@@ -110,7 +117,7 @@ public enum PlanValidationError: Error, Equatable, CustomStringConvertible {
         switch self {
         case .unsupportedVersion(let v): return "Unsupported plan version \(v)."
         case .emptyObjective: return "The plan has no objective."
-        case .habitCount(let n): return "A plan needs 2 to 4 habits, got \(n)."
+        case .habitCount(let n): return "A new plan starts with exactly 3 habits, got \(n)."
         case .habitField(let i, let f): return "Habit \(i + 1) has an invalid \(f)."
         case .phases: return "The plan phases must cover days 1 to 90 in order."
         }
@@ -125,7 +132,7 @@ extension PlanDraft {
         var plan = self
         plan.objective = objective.trimmed
         guard !plan.objective.isEmpty, plan.objective.count <= 280 else { throw PlanValidationError.emptyObjective }
-        guard (PlanSchema.minHabits...PlanSchema.maxHabits).contains(habits.count) else {
+        guard habits.count == PlanSchema.initialHabits else {
             throw PlanValidationError.habitCount(habits.count)
         }
         for (index, habit) in habits.enumerated() {
@@ -133,6 +140,8 @@ extension PlanDraft {
             h.title = habit.title.trimmed
             h.action = habit.action.trimmed
             h.minimumVersion = habit.minimumVersion.trimmed
+            h.target = String(habit.target.trimmed.prefix(60))
+            h.reason = String(habit.reason.trimmed.prefix(300))
             guard !h.title.isEmpty, h.title.count <= 60 else { throw PlanValidationError.habitField(index: index, field: "title") }
             guard !h.action.isEmpty, h.action.count <= 200 else { throw PlanValidationError.habitField(index: index, field: "action") }
             guard !h.minimumVersion.isEmpty, h.minimumVersion.count <= 200 else {
@@ -192,4 +201,14 @@ public enum HabitPalette {
 
 extension String {
     public var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
+}
+
+/// How many habits can be active at once. Free: three. Summa Pro: unlimited.
+/// Archived habits and their history never count and are never removed by a change of tier.
+public enum HabitLimit {
+    public static let freeActiveHabits = 3
+
+    public static func canAddHabit(activeCount: Int, isPro: Bool) -> Bool {
+        isPro || activeCount < freeActiveHabits
+    }
 }

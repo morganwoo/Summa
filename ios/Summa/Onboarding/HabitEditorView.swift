@@ -40,6 +40,8 @@ struct HabitEditorView: View {
                     field("Name", text: $draft.title, placeholder: "Read daily", id: "editor.title")
                     field("The action", text: $draft.action, placeholder: "Read two pages after breakfast", id: "editor.action",
                           note: "Concrete enough to put on a calendar.")
+                    field("Target", text: $draft.target, placeholder: "2 pages", id: "editor.target",
+                          note: "The measurable amount for one day.")
                     field("Minimum version", text: $draft.minimumVersion, placeholder: "Read one page", id: "editor.minimum",
                           note: "What still counts on a difficult day.")
 

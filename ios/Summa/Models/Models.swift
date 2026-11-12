@@ -12,9 +12,16 @@ final class Plan {
     var createdAt: Date
     var phasesData: Data
     var source: String
+    /// Chosen in onboarding. Global uniqueness is enforced once accounts exist.
+    var username: String = ""
+    /// The onboarding answers this plan was built from, kept for later recommendations.
+    var answersData: Data = Data()
     @Relationship(deleteRule: .cascade, inverse: \Habit.plan) var habits: [Habit] = []
 
-    init(objective: String, userName: String, startDay: DayKey, phases: [PhaseDraft], source: String) {
+    init(objective: String, userName: String, username: String = "", answers: OnboardingAnswers? = nil,
+         startDay: DayKey, phases: [PhaseDraft], source: String) {
+        self.username = username
+        self.answersData = answers.flatMap { try? JSONEncoder().encode($0) } ?? Data()
         self.id = UUID()
         self.objective = objective
         self.userName = userName
@@ -29,6 +36,10 @@ final class Plan {
 
     var phases: [PhaseDraft] {
         (try? JSONDecoder().decode([PhaseDraft].self, from: phasesData)) ?? PhaseDraft.standard()
+    }
+
+    var answers: OnboardingAnswers {
+        (try? JSONDecoder().decode(OnboardingAnswers.self, from: answersData)) ?? OnboardingAnswers()
     }
 
     var activeHabits: [Habit] {
@@ -53,6 +64,10 @@ final class Habit {
     var title: String
     var action: String
     var minimumVersion: String
+    /// Measurable amount for one occurrence, e.g. "10 pages".
+    var target: String = ""
+    /// Why this habit was recommended, in terms of the onboarding answers.
+    var reason: String = ""
     var colorHex: String
     var symbol: String
     var sortOrder: Int
@@ -72,6 +87,8 @@ final class Habit {
         self.title = draft.title
         self.action = draft.action
         self.minimumVersion = draft.minimumVersion
+        self.target = draft.target
+        self.reason = draft.reason
         self.colorHex = draft.colorHex
         self.symbol = draft.symbol
         self.sortOrder = sortOrder
@@ -102,7 +119,7 @@ final class Habit {
     }
 
     func asDraft() -> HabitDraft {
-        HabitDraft(id: id, title: title, action: action, minimumVersion: minimumVersion, weekdays: currentWeekdays,
+        HabitDraft(id: id, title: title, action: action, minimumVersion: minimumVersion, target: target, reason: reason, weekdays: currentWeekdays,
                    reminder: ReminderDraft(hour: reminderHour, minute: reminderMinute), colorHex: colorHex, symbol: symbol)
     }
 }

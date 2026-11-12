@@ -59,8 +59,9 @@ struct PlanService {
 
     func generate(from answers: OnboardingAnswers, stage: @MainActor @escaping (GenerationStage) -> Void) async throws -> PlanDraft {
         await stage(.reviewing)
-        // Send only what the plan needs. The referral code and UI state stay on device.
-        let body = RequestBody(schemaVersion: PlanSchema.version, answers: answers.values,
+        // Send only what the plan needs. The username, referral code, and UI state stay on device.
+        let body = RequestBody(schemaVersion: PlanSchema.version,
+                               answers: answers.values.filter { $0.key != QuestionID.username.rawValue },
                                weekdays: answers.weekdays, minutesPerDay: answers.minutesPerDay)
         let payload = try JSONEncoder().encode(body)
         try await Task.sleep(for: minimumStageTime)

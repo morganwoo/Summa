@@ -12,6 +12,8 @@ const validRequest = {
   answers: {
     name: ["Alex"],
     focus: ["Reading", "Movement"],
+    username: ["alex_k"],
+    obstacles: ["Low energy"],
     objective: ["Finish four books"],
     timeOfDay: ["Morning"],
     startSize: ["Tiny — almost too easy"],
@@ -41,7 +43,9 @@ test("drafts a schema-valid plan in mock mode without credentials", async () => 
     assert.equal(response.status, 200);
     const plan = planSchema.parse(await response.json());
     assert.equal(plan.objective, "Finish four books");
-    assert.equal(plan.habits.length, 2);
+    assert.equal(plan.habits.length, 3);
+    assert.equal(plan.habits[0]?.target, "2 pages");
+    assert.match(plan.habits[0]?.reason ?? "", /Finish four books.*low energy/);
     assert.deepEqual(plan.habits[0]?.weekdays, [2, 4, 6]);
     assert.deepEqual(plan.habits[0]?.reminder, { hour: 7, minute: 30 });
     assert.deepEqual(plan.phases.map((phase) => phase.title), ["Find your footing", "Settle into rhythm", "Make it yours"]);
@@ -65,12 +69,15 @@ test("rejects malformed requests before any generation happens", async () => {
 });
 
 test("never returns model output that fails the plan schema", async () => {
+  const base = (await mockProvider(validRequest as never)) as { habits: Record<string, unknown>[] };
   const bad: unknown[] = [
     null,
     "I am not JSON",
     { schemaVersion: 1, objective: "x", habits: [], phases: [] },
-    { ...(await mockProvider(validRequest as never) as object), habits: Array.from({ length: 5 }, (_, i) => ({ title: `H${i}`, action: "a", minimumVersion: "m", weekdays: [1] })) },
-    { ...(await mockProvider(validRequest as never) as object), injected: "<script>" },
+    ...[2, 4].map((length) => ({ ...base, habits: Array.from({ length }, (_, i) => ({ title: `H${i}`, action: "a", minimumVersion: "m", target: "1", reason: "r", weekdays: [1] })) })),
+    { ...base, habits: base.habits.map(({ reason, ...rest }) => rest) },
+    { ...base, habits: base.habits.map((habit) => ({ ...habit, title: "Same" })) },
+    { ...base, injected: "<script>" },
   ];
   for (const output of bad) {
     let calls = 0;
@@ -81,6 +88,15 @@ test("never returns model output that fails the plan schema", async () => {
     });
     assert.equal(calls, 2, "retries once before failing");
   }
+});
+
+test("drafts exactly three habits for every profile, and does not send the username to the model", async () => {
+  for (const focus of [[], ["Reading"], ["Focus", "Movement", "Reading", "Sleep routine", "Reflection"], ["Learn the cello"]]) {
+    const plan = planSchema.parse(await mockProvider({ ...validRequest, answers: { ...validRequest.answers, focus } } as never));
+    assert.equal(plan.habits.length, 3);
+    assert.equal(new Set(plan.habits.map((habit) => habit.title)).size, 3);
+  }
+  assert.ok(!buildUserMessage(validRequest as never).includes("alex_k"));
 });
 
 test("recovers when the first draft is invalid and the retry is valid", async () => {

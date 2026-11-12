@@ -8,9 +8,10 @@ import WidgetKit
 @MainActor
 enum PlanStore {
     @discardableResult
-    static func startPlan(from draft: PlanDraft, userName: String, remindersOn: Set<UUID>, today: DayKey,
+    static func startPlan(from draft: PlanDraft, answers: OnboardingAnswers, remindersOn: Set<UUID>, today: DayKey,
                           in context: ModelContext) -> Plan {
-        let plan = Plan(objective: draft.objective, userName: userName, startDay: today, phases: draft.phases, source: draft.source)
+        let plan = Plan(objective: draft.objective, userName: answers.name, username: answers.username, answers: answers,
+                        startDay: today, phases: draft.phases, source: draft.source)
         context.insert(plan)
         for (index, habitDraft) in draft.habits.enumerated() {
             addHabit(habitDraft, to: plan, sortOrder: index, startDay: today,
@@ -40,6 +41,7 @@ enum PlanStore {
         habit.title = draft.title.trimmed
         habit.action = draft.action.trimmed
         habit.minimumVersion = draft.minimumVersion.trimmed
+        habit.target = draft.target.trimmed
         habit.colorHex = draft.colorHex
         habit.symbol = draft.symbol
         habit.reminderEnabled = reminderEnabled
@@ -65,6 +67,11 @@ enum PlanStore {
         habit.archivedDay = today.string
         habit.reminderEnabled = false
         save(context, plan: habit.plan)
+    }
+
+    /// Free accounts keep three active habits; Summa Pro removes the limit.
+    static func canAddHabit(to plan: Plan) -> Bool {
+        HabitLimit.canAddHabit(activeCount: plan.activeHabits.count, isPro: Entitlements.isPro)
     }
 
     static func restore(_ habit: Habit, in context: ModelContext) {
@@ -110,6 +117,12 @@ enum PlanStore {
             Reminders.sync(plan: plan)
         }
     }
+}
+
+/// What the current account is entitled to. Subscriptions arrive in a later phase;
+/// until then everyone is on the free tier. `-proUnlocked` exists only to test the Pro path.
+enum Entitlements {
+    static var isPro: Bool { AppEnvironment.arguments.contains("-proUnlocked") }
 }
 
 /// Shares a snapshot with the widget through the app group.

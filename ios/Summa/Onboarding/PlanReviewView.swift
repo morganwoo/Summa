@@ -10,7 +10,6 @@ struct PlanReviewView: View {
     @EnvironmentObject private var clock: TodayClock
 
     @State private var editing: HabitDraft? = nil
-    @State private var addingNew = false
 
     private var draft: PlanDraft {
         onboarding.draft ?? StarterPlanBuilder.build(from: onboarding.answers)
@@ -46,15 +45,6 @@ struct PlanReviewView: View {
             }
             .environment(\.theme, theme)
         }
-        .sheet(isPresented: $addingNew) {
-            HabitEditorView(heading: "New habit",
-                            draft: HabitDraft(title: "", action: "", minimumVersion: "", weekdays: onboarding.answers.weekdays,
-                                              colorHex: nextColor, symbol: "leaf"),
-                            reminderOn: false) { created, reminderOn in
-                apply(created, reminderOn: reminderOn)
-            }
-            .environment(\.theme, theme)
-        }
         .onAppear {
             if onboarding.draft == nil { onboarding.draft = draft }
         }
@@ -62,11 +52,6 @@ struct PlanReviewView: View {
 
     private var canBegin: Bool {
         (try? draft.validated()) != nil
-    }
-
-    private var nextColor: String {
-        let used = Set(draft.habits.map { $0.colorHex.uppercased() })
-        return HabitPalette.all.map(\.hex).first { !used.contains($0.uppercased()) } ?? HabitPalette.gold
     }
 
     // MARK: Sections
@@ -128,25 +113,14 @@ struct PlanReviewView: View {
 
     private var habits: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Eyebrow("Starting habits")
+            Eyebrow("Your three habits")
             ForEach(draft.habits) { habit in
                 HabitDraftRow(habit: habit, reminderOn: onboarding.remindersOn.contains(habit.id),
-                              canRemove: draft.habits.count > PlanSchema.minHabits,
                               onEdit: { editing = habit },
-                              onRemove: { update { plan in plan.habits.removeAll { $0.id == habit.id } } })
+                              onRegenerate: { regenerate(habit) })
             }
-            if draft.habits.count < PlanSchema.maxHabits {
-                Button {
-                    addingNew = true
-                } label: {
-                    Label("Add a habit", systemImage: "plus")
-                }
-                .buttonStyle(.summaSecondary)
-                .accessibilityIdentifier("review.addHabit")
-            } else {
-                Text("Four is the most to start with. You can add more once these hold.")
-                    .font(.footnote).foregroundStyle(theme.muted)
-            }
+            Text("Every plan starts with three. Edit any of them, or ask for a different suggestion.")
+                .font(.footnote).foregroundStyle(theme.muted)
         }
     }
 
@@ -162,18 +136,27 @@ struct PlanReviewView: View {
         update { plan in
             if let index = plan.habits.firstIndex(where: { $0.id == habit.id }) {
                 plan.habits[index] = habit
-            } else if plan.habits.count < PlanSchema.maxHabits {
-                plan.habits.append(habit)
             }
         }
         if reminderOn { onboarding.remindersOn.insert(habit.id) } else { onboarding.remindersOn.remove(habit.id) }
+    }
+
+    /// Swaps one recommendation for the next one that fits this person. The other two stay as they are.
+    private func regenerate(_ habit: HabitDraft) {
+        Haptics.select()
+        let next = StarterPlanBuilder.replacement(for: habit, in: draft, answers: onboarding.answers)
+        update { plan in
+            if let index = plan.habits.firstIndex(where: { $0.id == habit.id }) { plan.habits[index] = next }
+        }
+        onboarding.remindersOn.remove(habit.id)
+        UIAccessibility.post(notification: .announcement, argument: "New suggestion: \(next.title)")
     }
 
     private func begin() {
         guard let plan = try? draft.validated() else { return }
         Haptics.commit()
         clock.refresh()
-        PlanStore.startPlan(from: plan, userName: onboarding.answers.name, remindersOn: onboarding.remindersOn,
+        PlanStore.startPlan(from: plan, answers: onboarding.answers, remindersOn: onboarding.remindersOn,
                             today: clock.today, in: context)
         onboarding.reset()
     }
@@ -183,9 +166,8 @@ private struct HabitDraftRow: View {
     @Environment(\.theme) private var theme
     let habit: HabitDraft
     let reminderOn: Bool
-    let canRemove: Bool
     let onEdit: () -> Void
-    let onRemove: () -> Void
+    let onRegenerate: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -201,7 +183,14 @@ private struct HabitDraftRow: View {
                 }
                 Spacer(minLength: 0)
             }
+            if !habit.reason.isEmpty {
+                Text(habit.reason)
+                    .font(SummaFont.serifItalic(18, relativeTo: .subheadline))
+                    .foregroundStyle(theme.text.opacity(0.9))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             VStack(alignment: .leading, spacing: 6) {
+                if !habit.target.isEmpty { detail("target", "Target: \(habit.target)") }
                 detail("calendar", OnboardingFlow.describe(weekdays: habit.weekdays))
                 detail("arrow.down.right.circle", "Minimum: \(habit.minimumVersion)")
                 if let reminder = habit.reminder {
@@ -217,13 +206,12 @@ private struct HabitDraftRow: View {
                     .frame(minHeight: 44)
                     .accessibilityLabel("Edit \(habit.title)")
                     .accessibilityIdentifier("review.edit.\(habit.title)")
-                if canRemove {
-                    Button("Remove", action: onRemove)
-                        .font(.subheadline)
-                        .foregroundStyle(theme.muted)
-                        .frame(minHeight: 44)
-                        .accessibilityLabel("Remove \(habit.title)")
-                }
+                Button("Suggest another", action: onRegenerate)
+                    .font(.subheadline)
+                    .foregroundStyle(theme.muted)
+                    .frame(minHeight: 44)
+                    .accessibilityLabel("Suggest another habit instead of \(habit.title)")
+                    .accessibilityIdentifier("review.regenerate.\(habit.title)")
             }
         }
         .card()
