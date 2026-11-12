@@ -272,7 +272,14 @@
 .actual-habit-cell.cell-full { background: var(--habit-ink); }
 .actual-habit-cell.cell-today { outline: 1px solid var(--habit-ink); outline-offset: 2px; }
 .program-preview { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.program-interaction { position: relative; width: 302px; }
+.program-cue-arrows { position: absolute; z-index: 4; left: -50px; top: 0; width: 380px; height: 710px; overflow: visible; pointer-events: none; color: var(--gold); opacity: .55; transition: opacity .3s ease; }
+.program-cue-arrows path { stroke: currentColor; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
+.program-cue-arrows.is-hidden { opacity: 0; }
 .program-phone { width: 302px; height: 668px; flex-basis: auto; }
+.program-book-hit { position: absolute; z-index: 2; left: 5.5%; top: 81.9%; width: 15.3%; height: 6.8%; padding: 0; border-radius: 50%; background: transparent; }
+.program-book-hit:hover { background: transparent; box-shadow: 0 0 16px var(--gold); }
+.program-book-hit:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .program-day-hit { position: absolute; z-index: 2; left: 10.1%; top: 35.55%; width: 6%; height: 2.75%; min-width: 0; padding: 0; border-radius: 5px; background: transparent; }
 .program-day-hit:hover { background: transparent; box-shadow: 0 0 12px var(--phase-foundation); }
 .program-day-hit:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
@@ -313,7 +320,7 @@
   .phone-trio:hover .phone-right { transform: translateX(10px) rotateY(-10deg) rotateZ(7deg) scale(.58); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .program-upper-dim, .program-day-sheet, .actual-habit-cell { transition: none; }
+  .program-upper-dim, .program-day-sheet, .program-cue-arrows, .actual-habit-cell { transition: none; }
   .phone-trio .product-phone { transition: none; }
   html { scroll-behavior: auto; }
   .reveal { transition: none; transform: none; opacity: 1; }
