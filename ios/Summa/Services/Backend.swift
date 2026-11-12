@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import CryptoKit
 import SummaCore
 
 /// The social backend (Supabase Auth + PostgREST), reached with URLSession only.
@@ -72,8 +73,11 @@ final class Backend: ObservableObject {
     @Published private(set) var session: Session?
     @Published private(set) var username: String?
     @Published private(set) var lastSync: Date?
+    /// What happened to the last confirmation link that was opened, for the sign-in card to show.
+    @Published var authNotice: String?
 
     private static let keychainAccount = "backend-session"
+    private static let verifierAccount = "backend-pkce-verifier"
     private var pendingSync: Task<Void, Never>?
     private let urlSession: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral
@@ -95,8 +99,11 @@ final class Backend: ObservableObject {
     /// Creates an account. Returns true when signed in straight away, false when the project asks
     /// for the email to be confirmed first. The password is sent over TLS and never stored on the device.
     func signUp(email: String, password: String) async throws -> Bool {
-        let data = try await send("POST", "auth/v1/signup", body: json(["email": email.trimmed.lowercased(), "password": password]), authorized: false)
+        var fields: [String: Any] = ["email": email.trimmed.lowercased(), "password": password]
+        fields.merge(newChallenge()) { _, new in new }
+        let data = try await send("POST", "auth/v1/signup", query: Self.redirectQuery, body: json(fields), authorized: false)
         guard (try? store(tokenResponse: data)) != nil else { return false }
+        Keychain.write("", for: Self.verifierAccount) // signed in at once: no link will follow
         return true
     }
 
@@ -107,13 +114,65 @@ final class Backend: ObservableObject {
     }
 
     func requestCode(email: String) async throws {
-        _ = try await send("POST", "auth/v1/otp", body: json(["email": email.trimmed.lowercased(), "create_user": true]), authorized: false)
+        var fields: [String: Any] = ["email": email.trimmed.lowercased(), "create_user": true]
+        fields.merge(newChallenge()) { _, new in new }
+        _ = try await send("POST", "auth/v1/otp", query: Self.redirectQuery, body: json(fields), authorized: false)
     }
 
     func verify(email: String, code: String) async throws {
         let data = try await send("POST", "auth/v1/verify",
                                   body: json(["type": "email", "email": email.trimmed.lowercased(), "token": code.trimmed]), authorized: false)
         try store(tokenResponse: data)
+    }
+
+    // MARK: Email confirmation link (summa://auth/callback)
+
+    private static let redirectQuery = [URLQueryItem(name: "redirect_to", value: AuthCallback.redirectURL)]
+
+    /// Starts a PKCE exchange: keeps a fresh random verifier in the Keychain and returns its challenge
+    /// for the server. The link in the email then carries a one-time code that only this device can redeem.
+    private func newChallenge() -> [String: Any] {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else { return [:] }
+        let verifier = Self.base64URL(Data(bytes))
+        guard Keychain.write(verifier, for: Self.verifierAccount) else { return [:] }
+        return ["code_challenge": Self.base64URL(Data(SHA256.hash(data: Data(verifier.utf8)))), "code_challenge_method": "s256"]
+    }
+
+    private static func base64URL(_ data: Data) -> String {
+        data.base64EncodedString().replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+    }
+
+    /// Handles a link the app was opened with. Returns false when it is not an auth callback.
+    /// Local tracking is never touched here; only the session changes.
+    @discardableResult
+    func handleCallback(_ url: URL) async -> Bool {
+        guard let callback = AuthCallback.parse(url) else { return false }
+        let confirmedElsewhere = "Your email is confirmed. Sign in with your email and password."
+        switch callback {
+        case .failed(.expired):
+            authNotice = "That link has expired or was already used. Try signing in, or create the account again for a new link."
+        case .failed(.unusable):
+            authNotice = "That link could not be used. Try signing in with your email and password."
+        case .code(let code):
+            guard let verifier = Keychain.read(Self.verifierAccount), !verifier.isEmpty else {
+                authNotice = confirmedElsewhere // opened on a device that did not start the sign-up
+                return true
+            }
+            do {
+                let data = try await send("POST", "auth/v1/token", query: [URLQueryItem(name: "grant_type", value: "pkce")],
+                                          body: json(["auth_code": code, "code_verifier": verifier]), authorized: false)
+                try store(tokenResponse: data)
+                Keychain.write("", for: Self.verifierAccount)
+                authNotice = nil
+            } catch Failure.offline {
+                authNotice = "You appear to be offline. Open the link again once you are connected."
+            } catch {
+                authNotice = confirmedElsewhere
+            }
+        }
+        return true
     }
 
     func signOut() async {

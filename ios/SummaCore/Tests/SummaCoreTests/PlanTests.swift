@@ -152,6 +152,21 @@ private func profile(focus: [String] = [], objective: String = "", obstacles: [S
 }
 
 @Suite struct StarterPlanTests {
+    @Test func aTypedSentenceIsNeverUsedAsAHabitTitle() throws {
+        var answers = OnboardingAnswers()
+        let sentence = "Spending more time studying instead of playing video games"
+        answers.set(.focus, [sentence])
+        answers.set(.objective, text: "Lose 10 lbs, get a FAANG internship")
+        let plan = try StarterPlanBuilder.build(from: answers).validated()
+        #expect(plan.habits.count == 3)
+        #expect(!plan.habits.contains { $0.title == String(sentence.prefix(48)) })
+        #expect(plan.habits.first?.title == "One focused block")
+
+        var short = OnboardingAnswers()
+        short.set(.focus, ["Piano"])
+        #expect(StarterPlanBuilder.build(from: short).habits.first?.title == "Piano")
+    }
+
     @Test func alwaysProducesExactlyThreeValidHabits() throws {
         let focusSets: [[String]] = [[], ["Reading"], ["Reflection"], ["Focus", "Movement"], ["Focus", "Movement", "Reading", "Sleep routine", "Reflection"],
                                      ["Learn the cello"], ["Learn the cello", "Paint", "Cook", "Garden"]]
@@ -598,5 +613,41 @@ private func profile(focus: [String] = [], objective: String = "", obstacles: [S
         #expect(FriendLimit.counterText(acceptedCount: 5, isPro: true) == "5 friends")
         #expect(FriendLimit.counterText(acceptedCount: 1, isPro: true) == "1 friend")
         #expect(FriendLimit.counterText(acceptedCount: 4, isPro: false) == "4 of 2 friends")
+    }
+}
+
+@Suite struct AuthCallbackTests {
+    private func parse(_ text: String) -> AuthCallback? { AuthCallback.parse(URL(string: text)!) }
+
+    @Test func aCodeInTheQueryIsAccepted() {
+        #expect(parse("summa://auth/callback?code=3f2a9c1e-77aa-4b1c-9d0e-5a6b7c8d9e0f") == .code("3f2a9c1e-77aa-4b1c-9d0e-5a6b7c8d9e0f"))
+        #expect(parse("SUMMA://Auth/callback?code=abcdefgh12345678&type=signup") == .code("abcdefgh12345678"))
+    }
+
+    @Test func otherLinksAreNotAuthCallbacks() {
+        #expect(parse("summa://pro") == nil)
+        #expect(parse("summa://auth/other?code=abcdefgh12345678") == nil)
+        #expect(parse("https://auth/callback?code=abcdefgh12345678") == nil)
+        #expect(parse("summa://evil/auth/callback?code=abcdefgh12345678") == nil)
+    }
+
+    @Test func tokensPlacedInTheLinkAreRefused() {
+        #expect(parse("summa://auth/callback#access_token=aaa.bbb.ccc&refresh_token=xyz&expires_in=3600") == .failed(.unusable))
+        #expect(parse("summa://auth/callback?code=abcdefgh12345678#access_token=aaa.bbb.ccc") == .failed(.unusable))
+    }
+
+    @Test func errorsAreReportedWithoutUsingTheirText() {
+        #expect(parse("summa://auth/callback?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired") == .failed(.expired))
+        #expect(parse("summa://auth/callback#error=access_denied&error_code=otp_expired") == .failed(.expired))
+        #expect(parse("summa://auth/callback?error=server_error&error_description=Call%20this%20number") == .failed(.unusable))
+        #expect(parse("summa://auth/callback?error=x&code=abcdefgh12345678") == .failed(.unusable))
+    }
+
+    @Test func malformedCodesAreRefused() {
+        #expect(parse("summa://auth/callback") == .failed(.unusable))
+        #expect(parse("summa://auth/callback?code=") == .failed(.unusable))
+        #expect(parse("summa://auth/callback?code=short") == .failed(.unusable))
+        #expect(parse("summa://auth/callback?code=abc%20def%22%3Bdrop12345") == .failed(.unusable))
+        #expect(parse("summa://auth/callback?code=" + String(repeating: "a", count: 600)) == .failed(.unusable))
     }
 }

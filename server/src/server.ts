@@ -3,6 +3,8 @@ import { InvalidPlanError, draftPlan, type Provider } from "./generate.js";
 import { planRequestSchema } from "./schema.js";
 
 export interface ServerOptions {
+  /** "mock" or "provider"; reported by /healthz so a mock server is easy to spot. */
+  mode?: string;
   provider: Provider;
   rateLimit?: { max: number; windowMs: number };
   /** Receives one line per request: method, path, status, duration. Never bodies. */
@@ -68,7 +70,7 @@ export function createPlanServer(options: ServerOptions): Server {
     try {
       if (request.method === "GET" && path === "/healthz") {
         status = 200;
-        return send(response, status, { ok: true });
+        return send(response, status, { ok: true, mode: options.mode ?? "unknown" });
       }
       if (path !== "/v1/plans") throw new HttpError(404, "not_found");
       if (request.method !== "POST") throw new HttpError(405, "method_not_allowed");

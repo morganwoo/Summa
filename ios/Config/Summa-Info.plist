@@ -4,6 +4,17 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>Summa</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.summa.Summa.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>summa</string>
+			</array>
+		</dict>
+	</array>
 	<key>SummaAPIBaseURL</key>
 	<string>$(SUMMA_API_BASE_URL)</string>
 	<key>SupabaseURL</key>

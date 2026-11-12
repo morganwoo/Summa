@@ -74,6 +74,10 @@ struct RootView: View {
         .onOpenURL { url in
             // The locked widget links here: tapping it is the request to unlock widgets.
             if url.scheme == "summa", url.host == "pro", !Entitlements.isPro { paywall = .widgets }
+            // The email confirmation link returns here with a one-time code.
+            if url.scheme?.lowercased() == "summa", url.host?.lowercased() == "auth" {
+                Task { await Backend.shared.handleCallback(url) }
+            }
         }
         .sheet(item: $paywall) { context in
             SummaProView(context: context).environment(\.theme, theme)

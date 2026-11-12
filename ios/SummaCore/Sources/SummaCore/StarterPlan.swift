@@ -63,7 +63,21 @@ public enum StarterPlanBuilder {
 
     static func profile(from answers: OnboardingAnswers) -> Profile {
         let written = (answers.text(.objective) + " " + answers.text(.future) + " " + answers.text(.extra)).lowercased()
-        var areas = answers.focusAreas
+        // A custom area the person typed is read for what it is about, so a sentence such as
+        // "more time studying instead of gaming" becomes a Focus habit instead of a habit named after the sentence.
+        var areas: [String] = []
+        for area in answers.focusAreas {
+            var resolved = area
+            if !OnboardingFlow.focusOptions.contains(area) {
+                let text = area.lowercased()
+                if let match = keywords.first(where: { entry in entry.words.contains(where: { text.contains($0) }) }) {
+                    resolved = match.area
+                } else if area.split(separator: " ").count > 4 {
+                    continue // a sentence that names no practice: the written objective still shapes the plan
+                }
+            }
+            if !areas.contains(resolved) { areas.append(resolved) }
+        }
         // Areas the person wrote about but did not tick come next.
         for entry in keywords where !areas.contains(entry.area) && entry.words.contains(where: { written.contains($0) }) {
             areas.append(entry.area)

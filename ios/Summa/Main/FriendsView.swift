@@ -100,7 +100,7 @@ private struct SignInCard: View {
                         .accessibilityIdentifier("signin.code")
                 }
             }
-            if let message { Text(message).font(.footnote).foregroundStyle(theme.muted).accessibilityIdentifier("signin.message") }
+            if let message = message ?? backend.authNotice { Text(message).font(.footnote).foregroundStyle(theme.muted).accessibilityIdentifier("signin.message") }
             Button(buttonTitle) { submit() }
                 .buttonStyle(.summaPrimary)
                 .disabled(!canSubmit)
@@ -124,6 +124,7 @@ private struct SignInCard: View {
     private func submit() {
         working = true
         message = nil
+        backend.authNotice = nil
         Task { @MainActor in
             defer { working = false }
             do {
@@ -132,10 +133,9 @@ private struct SignInCard: View {
                     if try await backend.signUp(email: email, password: password) {
                         password = ""
                     } else {
-                        message = "Account created. Open the confirmation email, then come back and sign in."
                         password = ""
                         mode = 0
-                        message = "Account created. Open the confirmation email, then sign in here."
+                        message = "Account created. Open the confirmation email on this iPhone and tap the link. It brings you back here, signed in."
                     }
                 case 2:
                     if codeSent {
