@@ -14,3 +14,8 @@
 - [x] Show clearly labeled widgets on a phone and a microphone in onboarding.
 - [x] Add dimensional phone edges and animate the curve through all four milestones.
 - [x] Verify the updated presentation on desktop and mobile.
+
+# Reference-matched phone presentation
+- [x] Match slimmer phone proportions, overlapping arrangement, and metallic edges without changing app screens.
+- [x] Show widgets in an Apple-style home screen with familiar general-purpose applications.
+- [x] Verify the phone presentation at desktop and mobile sizes.
