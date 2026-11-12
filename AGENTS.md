@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Keep the introductory marble animation scroll-driven with a sticky image stage and requestAnimationFrame updates; this preserves continuous native scrolling without a heavy 3D runtime.
+- Keep heatmap completion and theme selection in the demonstration's shared React state; all three latest-day indicators must update together without implying saved account data.

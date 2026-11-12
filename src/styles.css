@@ -34,6 +34,7 @@
   --color-cell-1: var(--cell-1);
   --color-cell-2: var(--cell-2);
   --color-cell-3: var(--cell-3);
+  --color-stone: var(--stone);
   --font-display: "Cinzel", serif;
   --font-serif: "Cormorant Garamond", serif;
   --font-sans: "Jost", sans-serif;
@@ -69,6 +70,14 @@
   --gradient-fade: linear-gradient(90deg, var(--background) 30%, transparent 75%);
   --gradient-bottom: linear-gradient(0deg, var(--background), transparent 40%);
   --shadow-glow: 0 0 24px oklch(0.78 0.11 80 / 45%);
+  --mind-background: oklch(0 0 0);
+  --stone: oklch(0.65 0.015 155);
+  --stone-dark: oklch(0.19 0.004 150);
+  --stone-light: oklch(0.3 0.006 150);
+  --stone-vein: oklch(0.7 0.004 150 / 7%);
+  --stone-check: oklch(0.8 0.035 150);
+  --stone-gradient: linear-gradient(125deg, var(--stone-dark), var(--stone-light) 48%, var(--stone-dark));
+  --stone-texture: repeating-linear-gradient(155deg, transparent 0 34px, var(--stone-vein) 35px, transparent 37px 90px);
 }
 
 @layer base {
@@ -85,13 +94,13 @@
 @utility eyebrow {
   font-family: var(--font-sans);
   font-size: 0.72rem;
-  letter-spacing: 0.35em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--muted-foreground);
 }
 @utility title-roman {
   font-family: var(--font-display);
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-transform: uppercase;
   line-height: 1.15;
 }
@@ -111,3 +120,53 @@
 @keyframes draw { to { stroke-dashoffset: 0 } }
 @utility draw-line { stroke-dasharray: 1200; stroke-dashoffset: 1200; }
 @utility drawn { animation: draw 2.4s ease forwards; }
+
+.mind-scroll { height: 280svh; background: var(--mind-background); --split: 0%; --zoom: 1; --head-opacity: 1; --quote-opacity: 0; --quote-scale: .76; --quote-shift: 28px; --cue-opacity: 1; }
+.mind-stage { position: sticky; top: 0; height: 100svh; overflow: hidden; display: grid; place-items: center; }
+.mind-head { position: absolute; width: min(76svh, 85vw, 860px); aspect-ratio: 1; opacity: var(--head-opacity); transform: scale(var(--zoom)); will-change: transform, opacity; }
+.mind-half { position: absolute; inset: 0; will-change: transform; }
+.mind-half img { width: 100%; height: 100%; object-fit: contain; }
+.mind-half-left { clip-path: polygon(0 0,50% 0,50% 28%,49.2% 34%,50.6% 42%,49.5% 51%,50% 62%,50% 100%,0 100%); transform: translateX(calc(-1 * var(--split))) rotate(calc(-3deg * var(--zoom) + 3deg)); transform-origin: 25% 50%; }
+.mind-half-right { clip-path: polygon(50% 0,100% 0,100% 100%,50% 100%,50% 62%,49.5% 51%,50.6% 42%,49.2% 34%,50% 28%); transform: translateX(var(--split)) rotate(calc(3deg * var(--zoom) - 3deg)); transform-origin: 75% 50%; }
+.mind-quote { position: relative; max-width: 780px; padding: 0 28px; text-align: center; opacity: var(--quote-opacity); transform: translateY(var(--quote-shift)) scale(var(--quote-scale)); will-change: transform, opacity; }
+.mind-cue { position: absolute; bottom: 30px; opacity: var(--cue-opacity); }
+.heatmap-section { position: relative; isolation: isolate; overflow: hidden; min-height: 860px; padding: 100px 6% 140px; display: flex; justify-content: flex-end; align-items: center; }
+.heatmap-sculpture { position: absolute; z-index: -1; width: min(51vw, 680px); height: 95%; object-fit: cover; object-position: left; left: -10%; top: 5%; transform: rotate(-12deg); opacity: .36; mask-image: linear-gradient(90deg, var(--mind-background) 10%, transparent 95%); }
+.heatmap-content { width: min(100%, 960px); }
+.habit-card { background: var(--card); transition: background .4s ease; }
+.heatmap-grid { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 7px; }
+.heatmap-cell { aspect-ratio: 1; min-width: 0; border-radius: 50%; transition: background .35s ease, box-shadow .35s ease; }
+.latest-cell { background: var(--cell); outline: 1px solid var(--cell-1); outline-offset: 2px; }
+.latest-cell.is-complete { background: var(--cell-3); box-shadow: var(--shadow-glow); }
+.habit-check { background: var(--gold); color: var(--primary-foreground); box-shadow: none; }
+.habit-check:hover { background: var(--cell-3); }
+.habit-check.is-complete { box-shadow: var(--shadow-glow); }
+.theme-choice { border: 1px solid transparent; border-radius: 50%; }
+.theme-choice.is-selected { border-color: var(--foreground); }
+.theme-swatch { display: block; width: 20px; height: 20px; border-radius: 50%; }
+.theme-swatch-gold { background: var(--gold); }
+.theme-swatch-marble { background: var(--stone-gradient); border: 1px solid var(--stone); }
+.heatmap-tool[data-theme="marble"] { --cell: oklch(0.8 0.025 150 / 12%); --cell-1: oklch(0.8 0.025 150 / 28%); --cell-2: oklch(0.8 0.025 150 / 55%); --cell-3: var(--stone-check); --gold: var(--stone-check); --shadow-glow: 0 0 18px oklch(0.8 0.035 150 / 25%); }
+.heatmap-tool[data-theme="marble"] .habit-card { background: var(--stone-texture), var(--stone-gradient); }
+.heatmap-tool[data-theme="marble"] .theme-swatch-gold { background: var(--primary); }
+@media (min-width: 1400px) { .heatmap-content { margin-right: 3%; } }
+@media (max-width: 767px) {
+  .mind-head { width: min(95vw, 70svh); }
+  .mind-scroll { height: 250svh; }
+  .heatmap-section { padding: 70px 18px 90px; min-height: auto; }
+  .heatmap-sculpture { width: 100%; left: -45%; opacity: .18; }
+  .heatmap-grid { gap: 4px; }
+  .habit-card { padding: 18px 14px; }
+  .heatmap-cell { border-radius: 50%; }
+  .latest-cell { outline-offset: 1px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .scroll-cue, .drawn { animation: none; }
+  .draw-line { stroke-dashoffset: 0; }
+  .mind-head { transform: none; }
+  .mind-half { transform: none; }
+  .mind-quote { transform: none; }
+  .heatmap-cell { transition: none; }
+}

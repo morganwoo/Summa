@@ -1,4 +1,7 @@
-import { useInView } from "./Reveal";
+import { useState } from "react";
+import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { HEATMAP_DAYS, toggleLatestDay } from "@/lib/heatmap-state";
 
 function seeded(n: number) { const x = Math.sin(n * 9301 + 49297) * 233280; return x - Math.floor(x); }
 
@@ -8,26 +11,25 @@ const habits = [
   { name: "Journal — evening review", rate: 0.9 },
 ];
 
-export function HabitCard({ name, rate, idx }: { name: string; rate: number; idx: number }) {
-  const { ref, inView } = useInView<HTMLDivElement>();
-  const cols = 30, rows = 3; // 90 days
+export function HabitCard({ name, rate, idx, completed, onComplete }: { name: string; rate: number; idx: number; completed: boolean; onComplete: () => void }) {
+  const cols = 30, rows = 3;
   return (
-    <div ref={ref} className="rounded-3xl border bg-card p-5 md:p-6">
+    <div className="habit-card rounded-lg border p-5 md:p-8">
       <div className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-cell-1 font-display text-gold">{["I", "II", "III"][idx]}</div>
-          <span className="font-serif text-xl md:text-2xl">{name}</span>
+          <span className="font-serif text-xl md:text-3xl">{name}</span>
         </div>
-        <div className="grid h-11 w-11 place-items-center rounded-xl bg-gold text-primary-foreground glow">✓</div>
+        <Button size="icon" aria-label={`Mark today's habits — ${name}`} aria-pressed={completed} title={completed ? "Clear today in all three habits" : "Complete today in all three habits"} onClick={onComplete} className={`habit-check h-11 w-11 rounded-full ${completed ? "is-complete" : ""}`}><Check /></Button>
       </div>
-      <div className="grid gap-[5px]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
-        {Array.from({ length: cols * rows }).map((_, i) => {
+      <div className="heatmap-grid">
+        {Array.from({ length: HEATMAP_DAYS }).map((_, i) => {
           const day = (i % cols) * rows + Math.floor(i / cols);
           const r = seeded(day + idx * 100);
-          const done = r < rate;
+          const latest = day === HEATMAP_DAYS - 1;
+          const done = latest ? completed : r < rate;
           const lvl = !done ? "bg-cell" : r < rate * 0.4 ? "bg-cell-3" : r < rate * 0.75 ? "bg-cell-2" : "bg-cell-1";
           return (
-            <div key={i} className={`aspect-square rounded-[4px] transition-all duration-500 ${inView ? lvl : "bg-cell"}`} style={{ transitionDelay: `${day * 15}ms` }} />
+            <div key={i} role="img" aria-label={`${name}, day ${day + 1}: ${done ? "completed" : "not completed"}`} className={`heatmap-cell ${latest ? `latest-cell ${completed ? "is-complete" : ""}` : lvl}`} />
           );
         })}
       </div>
@@ -37,5 +39,18 @@ export function HabitCard({ name, rate, idx }: { name: string; rate: number; idx
 }
 
 export function Heatmap() {
-  return <div className="flex flex-col gap-5">{habits.map((h, i) => <HabitCard key={h.name} {...h} idx={i} />)}</div>;
+  const [completed, setCompleted] = useState([false, false, false]);
+  const [theme, setTheme] = useState<"gold" | "marble">("gold");
+  return (
+    <div className="heatmap-tool" data-theme={theme}>
+      <div className="mb-6 flex items-center justify-between">
+        <p className="eyebrow">90 days · Your practice</p>
+        <div className="flex gap-3" role="group" aria-label="Heatmap theme">
+          <Button variant="ghost" size="icon" aria-label="Gold theme" aria-pressed={theme === "gold"} title="Gold" onClick={() => setTheme("gold")} className={`theme-choice ${theme === "gold" ? "is-selected" : ""}`}><span className="theme-swatch theme-swatch-gold" /></Button>
+          <Button variant="ghost" size="icon" aria-label="Marble theme" aria-pressed={theme === "marble"} title="Marble" onClick={() => setTheme("marble")} className={`theme-choice ${theme === "marble" ? "is-selected" : ""}`}><span className="theme-swatch theme-swatch-marble" /></Button>
+        </div>
+      </div>
+      <div className="flex flex-col gap-5">{habits.map((h, i) => <HabitCard key={h.name} {...h} idx={i} completed={completed[i] ?? false} onComplete={() => setCompleted(toggleLatestDay)} />)}</div>
+    </div>
+  );
 }
