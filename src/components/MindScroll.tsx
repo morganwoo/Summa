@@ -24,7 +24,7 @@ export function MindScroll() {
       element.style.setProperty("--quote-scale", `${0.76 + quote * 0.24}`);
       element.style.setProperty("--quote-shift", `${(1 - quote) * 28}px`);
       element.style.setProperty("--cue-opacity", `${1 - clamp(progress * 9)}`);
-      element.dataset.reducedMotion = String(reduced.matches);
+      element.dataset['reducedMotion'] = String(reduced.matches);
       frame = 0;
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
