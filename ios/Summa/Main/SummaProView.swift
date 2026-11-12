@@ -12,7 +12,7 @@ enum PaywallContext: String, Identifiable {
         case .habits: return "Summa Free holds three active habits. Pro removes the limit."
         case .reminders: return "Summa Free includes one daily reminder. Pro adds reminders for every habit and a second time for each."
         case .widgets: return "Home-screen widgets are part of Summa Pro."
-        case .friends: return "Friends and shared accountability are part of Summa Pro."
+        case .friends: return "Summa Free holds two friends. Pro makes your circle unlimited."
         case .graduation: return "The graduation certificate and highlight reel are part of Summa Pro."
         case .settings: return "Everything in Summa Free, with the limits removed."
         }
@@ -29,8 +29,9 @@ struct SummaProView: View {
 
     @State private var selectedID: String = Store.ProductID.annual
 
-    private let featureIcons = ["infinity", "bell.badge", "square.grid.2x2"]
-    private let featureTexts = ["Unlimited active habits", "Reminders for every habit, with a second time for each", "Home-screen widgets"]
+    private let featureIcons = ["infinity", "person.2", "bell.badge", "square.grid.2x2", "seal"]
+    private let featureTexts = ["Unlimited active habits", "Unlimited friends (Free includes two)", "Reminders for every habit, with a second time for each",
+                                "Home-screen widgets", "Graduation certificate and highlight reel"]
 
     var body: some View {
         NavigationStack {
@@ -51,7 +52,7 @@ struct SummaProView: View {
                                 Text(featureTexts[index]).font(.subheadline)
                             }
                         }
-                        Text("More arrives with later updates: friends, and the graduation certificate.")
+                        Text("Friends, leaderboards, nudges, weekly reports, and the full 90-day program are free for everyone.")
                             .font(.footnote).foregroundStyle(theme.muted)
                     }
                     .card()

@@ -582,3 +582,21 @@ private func profile(focus: [String] = [], objective: String = "", obstacles: [S
         #expect(events.allSatisfy { $0.chapter == 2 })
     }
 }
+
+@Suite struct FriendLimitTests {
+    @Test func freeHoldsTwoFriendsAndProIsUnlimited() {
+        #expect(FriendLimit.canAddFriend(acceptedCount: 0, isPro: false))
+        #expect(FriendLimit.canAddFriend(acceptedCount: 1, isPro: false))
+        #expect(!FriendLimit.canAddFriend(acceptedCount: 2, isPro: false))
+        #expect(!FriendLimit.canAddFriend(acceptedCount: 5, isPro: false)) // lapsed Pro keeps friends, cannot add
+        #expect(FriendLimit.canAddFriend(acceptedCount: 50, isPro: true))
+    }
+
+    @Test func counterReadsNaturally() {
+        #expect(FriendLimit.counterText(acceptedCount: 1, isPro: false) == "1 of 2 friends")
+        #expect(FriendLimit.counterText(acceptedCount: 2, isPro: false) == "2 of 2 friends")
+        #expect(FriendLimit.counterText(acceptedCount: 5, isPro: true) == "5 friends")
+        #expect(FriendLimit.counterText(acceptedCount: 1, isPro: true) == "1 friend")
+        #expect(FriendLimit.counterText(acceptedCount: 4, isPro: false) == "4 of 2 friends")
+    }
+}

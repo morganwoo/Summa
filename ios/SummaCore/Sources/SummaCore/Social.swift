@@ -132,3 +132,19 @@ public enum ActivityBuilder {
         return events
     }
 }
+
+/// Summa Free holds two accepted friends; Summa Pro is unlimited. The server enforces this;
+/// the app uses the same rule to decide when to show the subscription page instead of asking.
+public enum FriendLimit {
+    public static let free = 2
+
+    public static func canAddFriend(acceptedCount: Int, isPro: Bool) -> Bool {
+        isPro || acceptedCount < free
+    }
+
+    /// "1 of 2 friends" on Free, "5 friends" on Pro.
+    public static func counterText(acceptedCount: Int, isPro: Bool) -> String {
+        if isPro { return acceptedCount == 1 ? "1 friend" : "\(acceptedCount) friends" }
+        return "\(acceptedCount) of \(free) friends"
+    }
+}

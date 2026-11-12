@@ -28,8 +28,8 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Eyebrow("Membership")
                     Text(store.planName).font(SummaFont.serif(24, relativeTo: .title3))
-                    Text(store.isPro ? "Unlimited habits, reminders for every habit, and home-screen widgets."
-                                     : "Three active habits, one daily reminder, the full 90-day program.")
+                    Text(store.isPro ? "Unlimited habits and friends, reminders for every habit, widgets, and the graduation certificate."
+                                     : "Three active habits, two friends, one daily reminder, the full 90-day program.")
                         .font(.footnote).foregroundStyle(theme.muted)
                     Button(store.isPro ? "View Summa Pro" : "See Summa Pro") { paywall = .settings }
                         .buttonStyle(.summaSecondary)

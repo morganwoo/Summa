@@ -2,15 +2,13 @@ import SwiftUI
 import SwiftData
 import SummaCore
 
-/// Friends: leaderboard, activity, and friend management. Part of Summa Pro.
+/// Friends: leaderboard, activity, and friend management. Open to everyone; Summa Free holds two friends.
 struct FriendsView: View {
     @Environment(\.theme) private var theme
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var clock: TodayClock
     @ObservedObject private var backend = Backend.shared
     let plan: Plan
-
-    @State private var paywall: PaywallContext? = nil
 
     var body: some View {
         ScrollView {
@@ -19,9 +17,7 @@ struct FriendsView: View {
                     Eyebrow("Friends")
                     Text("Kept together.").font(SummaFont.serif(36, relativeTo: .largeTitle)).accessibilityAddTraits(.isHeader)
                 }
-                if !store.isPro {
-                    locked
-                } else if backend.config == nil {
+                if backend.config == nil {
                     notice("Friends is not connected in this build.",
                            "The social backend has not been configured yet. Your own tracking is unaffected.")
                 } else if !backend.isSignedIn {
@@ -35,24 +31,6 @@ struct FriendsView: View {
             .padding(.bottom, 90)
         }
         .scrollDismissesKeyboard(.interactively)
-        .onAppear {
-            // Opening Friends on a free account is the request that shows the subscription page.
-            if !store.isPro { paywall = .friends }
-        }
-        .sheet(item: $paywall) { SummaProView(context: $0).environment(\.theme, theme) }
-    }
-
-    private var locked: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Friends is part of Summa Pro.").font(SummaFont.serif(24, relativeTo: .title3))
-            Text("See friends’ shared heatmaps, a weekly leaderboard, and send a supportive nudge. You choose what is shared.")
-                .font(.subheadline).foregroundStyle(theme.muted)
-            Button("See Summa Pro") { paywall = .friends }
-                .buttonStyle(.summaPrimary)
-                .accessibilityIdentifier("friends.unlock")
-        }
-        .card()
-        .accessibilityIdentifier("friends.locked")
     }
 
     private func notice(_ title: String, _ detail: String) -> some View {
@@ -64,46 +42,83 @@ struct FriendsView: View {
     }
 }
 
-/// Sign in with a one-time code sent by email.
+/// Create an account or sign in with email and password. A one-time emailed code is offered as an alternative.
 private struct SignInCard: View {
     @Environment(\.theme) private var theme
     @ObservedObject private var backend = Backend.shared
+    @State private var mode = 0 // 0 sign in, 1 create account, 2 email code
     @State private var email = ""
+    @State private var password = ""
     @State private var code = ""
     @State private var codeSent = false
     @State private var working = false
     @State private var message: String? = nil
+
+    private var canSubmit: Bool {
+        guard !working, email.contains("@"), email.contains(".") else { return false }
+        switch mode {
+        case 2: return !codeSent || code.trimmed.count >= 6
+        case 1: return password.count >= 8
+        default: return !password.isEmpty
+        }
+    }
+
+    private var buttonTitle: String {
+        switch mode {
+        case 2: return codeSent ? "Sign in" : "Email me a code"
+        case 1: return "Create account"
+        default: return "Sign in"
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Sign in to add friends").font(SummaFont.serif(24, relativeTo: .title3))
             Text("An account is needed only for Friends. Your tracking stays on this device and works without one. Onboarding answers and photos are never uploaded.")
                 .font(.footnote).foregroundStyle(theme.muted)
-            field("Email", text: $email, id: "signin.email")
-                .keyboardType(.emailAddress).textContentType(.emailAddress).textInputAutocapitalization(.never).autocorrectionDisabled()
-            if codeSent {
-                field("6-digit code from the email", text: $code, id: "signin.code")
-                    .keyboardType(.numberPad).textContentType(.oneTimeCode)
+            Picker("Method", selection: $mode) {
+                Text("Sign in").tag(0)
+                Text("Create account").tag(1)
+                Text("Email code").tag(2)
             }
-            if let message { Text(message).font(.footnote).foregroundStyle(theme.muted) }
-            Button(codeSent ? "Sign in" : "Email me a code") { submit() }
+            .pickerStyle(.segmented)
+            field {
+                TextField("Email", text: $email)
+                    .keyboardType(.emailAddress).textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .accessibilityIdentifier("signin.email")
+            }
+            if mode != 2 {
+                field {
+                    SecureField(mode == 1 ? "Password (8 or more characters)" : "Password", text: $password)
+                        .textContentType(mode == 1 ? .newPassword : .password)
+                        .accessibilityIdentifier("signin.password")
+                }
+            } else if codeSent {
+                field {
+                    TextField("6-digit code from the email", text: $code)
+                        .keyboardType(.numberPad).textContentType(.oneTimeCode)
+                        .accessibilityIdentifier("signin.code")
+                }
+            }
+            if let message { Text(message).font(.footnote).foregroundStyle(theme.muted).accessibilityIdentifier("signin.message") }
+            Button(buttonTitle) { submit() }
                 .buttonStyle(.summaPrimary)
-                .disabled(working || !email.contains("@") || (codeSent && code.trimmed.count < 6))
+                .disabled(!canSubmit)
                 .accessibilityIdentifier("signin.submit")
-            if codeSent {
-                Button("Use a different email") { codeSent = false; code = ""; message = nil }
-                    .font(.footnote.weight(.semibold)).foregroundStyle(theme.gold).frame(minHeight: 44)
-            }
         }
         .card()
+        .onChange(of: mode) { _, _ in
+            message = nil
+            codeSent = false
+            code = ""
+        }
     }
 
-    private func field(_ placeholder: String, text: Binding<String>, id: String) -> some View {
-        TextField(placeholder, text: text)
+    private func field<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
             .padding(.horizontal, 14).frame(minHeight: 48)
             .background(theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(theme.divider))
-            .accessibilityIdentifier(id)
     }
 
     private func submit() {
@@ -112,16 +127,35 @@ private struct SignInCard: View {
         Task { @MainActor in
             defer { working = false }
             do {
-                if codeSent {
-                    try await backend.verify(email: email, code: code)
-                } else {
-                    try await backend.requestCode(email: email)
-                    codeSent = true
-                    message = "Check your inbox for a code."
+                switch mode {
+                case 1:
+                    if try await backend.signUp(email: email, password: password) {
+                        password = ""
+                    } else {
+                        message = "Account created. Open the confirmation email, then come back and sign in."
+                        password = ""
+                        mode = 0
+                        message = "Account created. Open the confirmation email, then sign in here."
+                    }
+                case 2:
+                    if codeSent {
+                        try await backend.verify(email: email, code: code)
+                    } else {
+                        try await backend.requestCode(email: email)
+                        codeSent = true
+                        message = "Check your inbox for a code."
+                    }
+                default:
+                    try await backend.signIn(email: email, password: password)
+                    password = ""
                 }
+            } catch Backend.Failure.server(let status) where status == 400 || status == 401 || status == 422 {
+                message = mode == 1 ? "That did not work. The email may already have an account, or the password is too weak."
+                                    : (mode == 2 ? "That code did not work. Try again." : "Email or password is not right, or the email is not confirmed yet.")
+            } catch Backend.Failure.server(let status) where status == 429 {
+                message = "Too many attempts. Wait a minute and try again."
             } catch {
-                message = codeSent && !(error is Backend.Failure) ? "That code did not work. Try again."
-                    : ((error as? LocalizedError)?.errorDescription ?? "That did not work. Try again.")
+                message = (error as? LocalizedError)?.errorDescription ?? "That did not work. Try again."
             }
         }
     }
@@ -130,9 +164,11 @@ private struct SignInCard: View {
 private struct FriendsHome: View {
     @Environment(\.theme) private var theme
     @EnvironmentObject private var clock: TodayClock
+    @EnvironmentObject private var store: Store
     @ObservedObject private var backend = Backend.shared
     let plan: Plan
 
+    @State private var paywall: PaywallContext? = nil
     @State private var section = 0
     @State private var sort: Leaderboard.Sort = .completed
     @State private var board: [LeaderboardEntry] = []
@@ -158,6 +194,7 @@ private struct FriendsHome: View {
                     .accessibilityIdentifier("friends.account")
             }
             if needsUsername { usernameCard }
+            counter
             Picker("Section", selection: $section) {
                 Text("Leaderboard").tag(0)
                 Text("Activity").tag(1)
@@ -180,6 +217,7 @@ private struct FriendsHome: View {
             }
         }
         .task { await load() }
+        .sheet(item: $paywall) { SummaProView(context: $0).environment(\.theme, theme) }
         .sheet(item: $viewing) { entry in
             FriendHeatmapSheet(entry: entry).environment(\.theme, theme)
         }
@@ -212,6 +250,43 @@ private struct FriendsHome: View {
         }
     }
 
+    private var friendCount: Int { friends.filter { $0.relation == "friend" }.count }
+    private var hasRoom: Bool { FriendLimit.canAddFriend(acceptedCount: friendCount, isPro: store.isPro) }
+
+    /// Friend count, an invitation, and, only once Free is full, a quiet way to lift the limit.
+    private var counter: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(FriendLimit.counterText(acceptedCount: friendCount, isPro: store.isPro))
+                    .font(.subheadline.weight(.semibold))
+                    .accessibilityIdentifier("friends.counter")
+                Spacer()
+                ShareLink(item: inviteText) { Label("Invite", systemImage: "square.and.arrow.up") }
+                    .font(.footnote.weight(.semibold)).foregroundStyle(theme.gold).frame(minHeight: 44)
+                    .accessibilityIdentifier("friends.invite")
+            }
+            if !hasRoom {
+                Button("Unlock unlimited friends") { paywall = .friends }
+                    .font(.footnote.weight(.semibold)).foregroundStyle(theme.gold).frame(minHeight: 44)
+                    .accessibilityIdentifier("friends.unlimited")
+            }
+        }
+    }
+
+    private var inviteText: String {
+        let name = backend.username.map { " Add me: @\($0)." } ?? ""
+        return "I am doing 90 days of practice on Summa.\(name) https://summaaeterna.lovable.app/"
+    }
+
+    /// Adding or accepting a friend. On Free at two friends this shows the subscription page instead of asking the server.
+    private func addFriend(_ function: String, _ arguments: [String: Any], done: String? = nil) {
+        guard hasRoom else {
+            paywall = .friends
+            return
+        }
+        act(function, arguments, done: done)
+    }
+
     private func act(_ function: String, _ arguments: [String: Any], done: String? = nil) {
         Task { @MainActor in
             do {
@@ -219,6 +294,13 @@ private struct FriendsHome: View {
                 if let done { status = done }
                 await load()
                 if let done { status = done }
+            } catch Backend.Failure.friendLimit {
+                // The server is the authority. If it disagrees with a Pro purchase, say so rather than loop on the paywall.
+                if store.isPro {
+                    status = "Your Summa Pro status has not reached the server yet. Try again in a moment."
+                } else {
+                    paywall = .friends
+                }
             } catch {
                 status = (error as? LocalizedError)?.errorDescription ?? "That did not work."
             }
@@ -358,14 +440,14 @@ private struct FriendsHome: View {
                 HStack {
                     Text("@\(hit.username)").font(.subheadline)
                     Spacer()
-                    Button("Add") { act("request_friend", ["target": hit.userId.uuidString], done: "Request sent to @\(hit.username).") }
+                    Button("Add") { addFriend("request_friend", ["target": hit.userId.uuidString], done: "Request sent to @\(hit.username).") }
                         .font(.subheadline.weight(.semibold)).foregroundStyle(theme.gold).frame(minHeight: 44)
                 }
             }
         }
         .card()
         group("Requests", "incoming") { row in
-            Button("Accept") { act("respond_friend", ["from_user": row.userId.uuidString, "accept": true]) }
+            Button("Accept") { addFriend("respond_friend", ["from_user": row.userId.uuidString, "accept": true]) }
             Button("Decline") { act("respond_friend", ["from_user": row.userId.uuidString, "accept": false]) }
         }
         group("Friends", "friend") { row in

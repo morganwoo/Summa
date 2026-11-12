@@ -213,3 +213,5 @@ scheme = f'''<?xml version="1.0" encoding="UTF-8"?>
 '''
 open(os.path.join(root, "xcshareddata", "xcschemes", "Summa.xcscheme"), "w").write(scheme)
 print("wrote", os.path.normpath(root))
+import subprocess, sys
+subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "use-xcconfig.py")])

@@ -3,3 +3,6 @@ xcuserdata/
 DerivedData/
 *.xcuserstate
 .swiftpm/
+
+# Per-developer settings (Supabase URL and anon key)
+Config/Secrets.xcconfig

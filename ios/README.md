@@ -42,20 +42,15 @@ locally in the simulator (Xcode: Debug > StoreKit > Manage Transactions). To sel
 three product IDs in App Store Connect (one subscription group for monthly and annual, one non-consumable), sign the
 Paid Applications agreement, add a privacy policy URL, and enable the App Groups capability for both targets.
 
-Free: three active habits, one reminder. Pro: unlimited habits, a reminder for every habit plus a second time each,
-and home-screen widgets. Entitlement comes only from verified transactions (`Services/Store.swift`).
+Free: three active habits, two friends, one reminder. Pro: unlimited habits and friends, a reminder for every habit plus a
+second time each, home-screen widgets, and the graduation certificate and reel. Friends itself is free for everyone. Entitlement comes only from verified transactions (`Services/Store.swift`).
 
 ## Friends (Supabase)
 
 Friends needs a Supabase project. Without one the tab says it is not connected, and everything else works.
-
-1. Create a Supabase project and run `server/supabase/schema.sql` in its SQL editor.
-2. In Authentication, enable the Email provider with one-time codes (include `{{ .Token }}` in the email template).
-3. Deploy `server/supabase/functions/sync-entitlement` and set its secrets (see the comment at the top of that file).
-4. Set the build settings `SUPABASE_URL` and `SUPABASE_ANON_KEY` on the Summa project. Use the anon key only;
-   the service-role key must never be in the app.
-
-`server/supabase/test.sql` checks the access rules against a local PostgreSQL.
+Setup, the values to copy, and the verification script are in `server/supabase/README.md`. In short: apply
+`server/supabase/migrations/0001_summa_social.sql`, then copy `Config/Secrets.example.xcconfig` to
+`Config/Secrets.xcconfig` and fill in the project URL and the anon key. Never the service-role key.
 
 ## Tests
 

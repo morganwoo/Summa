@@ -1,0 +1,12 @@
+// Project-wide build settings for Summa.
+// Values that differ per developer or must stay out of Git live in Secrets.xcconfig,
+// which is git-ignored. Copy Secrets.example.xcconfig to Secrets.xcconfig to set them.
+
+// Empty = draft plans on device. e.g. http:/$()/localhost:8787 to use the plan API in ../server.
+SUMMA_API_BASE_URL =
+
+// Empty = the Friends tab reports that it is not connected. Everything else works.
+SUPABASE_URL =
+SUPABASE_ANON_KEY =
+
+#include? "Secrets.xcconfig"
