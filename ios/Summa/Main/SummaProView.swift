@@ -4,7 +4,7 @@ import StoreKit
 /// Why the subscription page is being shown. Only ever presented in response to
 /// something the person tried to do, or when they open it themselves.
 enum PaywallContext: String, Identifiable {
-    case habits, reminders, widgets, friends, graduation, settings
+    case habits, reminders, widgets, friends, graduation, settings, reflections
     var id: String { rawValue }
 
     var headline: String {
@@ -15,6 +15,7 @@ enum PaywallContext: String, Identifiable {
         case .friends: return "Summa Free holds two friends. Pro makes your circle unlimited."
         case .graduation: return "The graduation certificate and highlight reel are part of Summa Pro."
         case .settings: return "Everything in Summa Free, with the limits removed."
+        case .reflections: return "Daily reflections, conversations with Summa, and \(Colosseum.title) are part of Summa Pro."
         }
     }
 }
@@ -29,9 +30,10 @@ struct SummaProView: View {
 
     @State private var selectedID: String = Store.ProductID.annual
 
-    private let featureIcons = ["infinity", "person.2", "bell.badge", "square.grid.2x2", "seal"]
+    private let featureIcons = ["infinity", "person.2", "bell.badge", "square.grid.2x2", "seal", "book.closed"]
     private let featureTexts = ["Unlimited active habits", "Unlimited friends (Free includes two)", "Reminders for every habit, with a second time for each",
-                                "Home-screen widgets", "Graduation certificate and highlight reel"]
+                                "Home-screen widgets", "Graduation certificate and highlight reel",
+                                "Daily reflections, with Summa to talk them through"]
 
     var body: some View {
         NavigationStack {

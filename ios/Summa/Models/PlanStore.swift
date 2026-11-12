@@ -60,6 +60,7 @@ enum PlanStore {
     }
 
     static func addPhoto(_ data: Data, milestoneDay: Int?, to plan: Plan, today: DayKey, in context: ModelContext) {
+        guard !DevSandbox.isActive else { return } // the developer preview never writes image files
         guard let fileName = PhotoStore.save(data) else { return }
         let photo = ProgressPhoto(day: today, milestoneDay: milestoneDay, fileName: fileName)
         context.insert(photo)
@@ -176,6 +177,144 @@ enum PlanStore {
     }
 }
 
+/// True only while the DEBUG developer preview is on screen. While it is, nothing reaches the widget,
+/// the notification schedule, the social backend, or the photo folder, so made-up preview data can
+/// never replace the person's real record. Always false in Release builds.
+enum DevSandbox {
+    #if DEBUG
+    static var isActive = false
+    #else
+    static let isActive = false
+    #endif
+    /// The preview plan always uses this id, so its one-time celebrations can be reset and replayed.
+    static let previewPlanID = UUID(uuidString: "00000000-0000-4000-8000-0000000D0E0B")!
+}
+
+enum ReflectionError: LocalizedError, Equatable {
+    case proRequired, empty, futureDay
+    var errorDescription: String? {
+        switch self {
+        case .proRequired: return "Daily reflections are part of Summa Pro."
+        case .empty: return "Write something before saving."
+        case .futureDay: return "That day has not arrived yet."
+        }
+    }
+}
+
+/// The only way reflections and victories are read or written. Every call checks the Summa Pro
+/// entitlement first. Saved entries are never deleted when a subscription ends: they are simply
+/// not returned until Pro is active again.
+@MainActor
+enum ReflectionStore {
+    private static func requirePro() throws {
+        if ReflectionAccess.denial(isPro: Entitlements.isPro) != nil { throw ReflectionError.proRequired }
+    }
+
+    static func all(for plan: Plan) -> [Reflection] {
+        ReflectionAccess.visible(plan.reflections, isPro: Entitlements.isPro).sorted { $0.createdAt < $1.createdAt }
+    }
+
+    static func entries(for plan: Plan, dayNumber: Int) -> [Reflection] {
+        all(for: plan).filter { $0.dayNumber == dayNumber }
+    }
+
+    /// Days that carry at least one reflection, for the heatmap's gold glow.
+    static func days(for plan: Plan) -> Set<DayKey> {
+        Set(all(for: plan).compactMap { DayKey($0.day) })
+    }
+
+    @discardableResult
+    static func add(_ text: String, to plan: Plan, dayNumber: Int, today: DayKey, fromCompanion: Bool = false,
+                    in context: ModelContext) throws -> Reflection {
+        try requirePro()
+        guard ReflectionRule.isSavable(text) else { throw ReflectionError.empty }
+        guard (1...plan.dayNumber(today: today)).contains(dayNumber), today >= plan.start else { throw ReflectionError.futureDay }
+        let owner = DevSandbox.isActive ? "preview" : (Backend.shared.session?.userID.uuidString ?? "device")
+        let entry = Reflection(text: ReflectionRule.normalized(text), dayNumber: dayNumber, day: plan.start.adding(dayNumber - 1),
+                               journeyID: plan.id, chapter: plan.chapter, ownerID: owner, fromCompanion: fromCompanion)
+        context.insert(entry)
+        entry.plan = plan
+        try context.save()
+        return entry
+    }
+
+    static func update(_ entry: Reflection, text: String, in context: ModelContext) throws {
+        try requirePro()
+        guard ReflectionRule.isSavable(text) else { throw ReflectionError.empty }
+        entry.text = ReflectionRule.normalized(text)
+        entry.updatedAt = Date()
+        try context.save()
+    }
+
+    static func delete(_ entry: Reflection, in context: ModelContext) throws {
+        try requirePro()
+        entry.plan?.reflections.removeAll { $0.id == entry.id }
+        context.delete(entry)
+        try context.save()
+    }
+
+    // MARK: Your Colosseum
+
+    static func victories(for plan: Plan) -> [Victory] {
+        ReflectionAccess.visible(plan.victories, isPro: Entitlements.isPro).sorted { $0.createdAt > $1.createdAt }
+    }
+
+    static func isPromoted(_ entry: Reflection) -> Bool {
+        guard let id = entry.victoryID else { return false }
+        return entry.plan?.victories.contains { $0.id == id } ?? false
+    }
+
+    /// Copies a reflection into the Colosseum. The reflection is kept, and promoting it again
+    /// returns the victory that already exists instead of making a second one.
+    @discardableResult
+    static func promote(_ entry: Reflection, in context: ModelContext) throws -> Victory {
+        try requirePro()
+        guard let plan = entry.plan else { throw ReflectionError.empty }
+        if let existing = plan.victories.first(where: { $0.id == entry.victoryID || $0.sourceReflectionID == entry.id }) {
+            entry.victoryID = existing.id
+            try context.save()
+            return existing
+        }
+        let victory = Victory(text: entry.text, dayNumber: entry.dayNumber, day: entry.day, sourceReflectionID: entry.id)
+        victory.category = VictoryCategory.classify(entry.text).rawValue
+        context.insert(victory)
+        victory.plan = plan
+        entry.victoryID = victory.id
+        try context.save()
+        return victory
+    }
+
+    /// Adds a victory directly, written by the person or approved from a suggestion.
+    @discardableResult
+    static func addVictory(_ text: String, category: VictoryCategory, to plan: Plan, today: DayKey, in context: ModelContext) throws -> Victory {
+        try requirePro()
+        guard ReflectionRule.isSavable(text) else { throw ReflectionError.empty }
+        let dayNumber = plan.dayNumber(today: today)
+        let victory = Victory(text: ReflectionRule.normalized(text), dayNumber: dayNumber,
+                              day: plan.start.adding(dayNumber - 1).string, sourceReflectionID: nil)
+        victory.category = category.rawValue
+        context.insert(victory)
+        victory.plan = plan
+        try context.save()
+        return victory
+    }
+
+    static func setCategory(_ category: VictoryCategory, for victory: Victory, in context: ModelContext) throws {
+        try requirePro()
+        victory.category = category.rawValue
+        try context.save()
+    }
+
+    static func delete(_ victory: Victory, in context: ModelContext) throws {
+        try requirePro()
+        let plan = victory.plan
+        plan?.reflections.filter { $0.victoryID == victory.id }.forEach { $0.victoryID = nil }
+        plan?.victories.removeAll { $0.id == victory.id }
+        context.delete(victory)
+        try context.save()
+    }
+}
+
 /// What the current account is entitled to, from verified App Store transactions.
 @MainActor
 enum Entitlements {
@@ -188,6 +327,7 @@ enum WidgetBridge {
 
     @MainActor
     static func publish(plan: Plan) {
+        guard !DevSandbox.isActive else { return }
         let start = plan.start
         let habits = plan.activeHabits.map {
             WidgetSnapshot.Habit(id: $0.id, title: $0.title, colorHex: $0.colorHex, symbol: $0.symbol, timeline: $0.timeline(planStart: start))
@@ -201,6 +341,7 @@ enum WidgetBridge {
     }
 
     static func clear() {
+        guard !DevSandbox.isActive else { return }
         defaults?.removeObject(forKey: WidgetSnapshot.defaultsKey)
         WidgetCenter.shared.reloadAllTimelines()
     }

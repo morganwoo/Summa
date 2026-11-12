@@ -42,6 +42,7 @@ enum Reminders {
                             secondMinute: habit.secondReminderMinute)
         }
         let planned = ReminderPlanner.plan(requests, isPro: Entitlements.isPro)
+        guard !DevSandbox.isActive else { return planned } // the developer preview never reschedules real reminders
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
         for entry in planned.scheduled {
@@ -58,6 +59,7 @@ enum Reminders {
     }
 
     static func removeAll() {
+        guard !DevSandbox.isActive else { return }
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
 

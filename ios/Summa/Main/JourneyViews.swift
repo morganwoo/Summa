@@ -610,6 +610,7 @@ struct GraduationView: View {
                     startingNewChapter = true
                 }
                 .buttonStyle(.summaPrimary)
+                .disabled(DevSandbox.isActive) // the developer preview never starts a real chapter
                 .accessibilityIdentifier("graduation.newChapter")
                 Button("Continue with the same habits") { confirmContinue = true }
                     .buttonStyle(.summaSecondary)

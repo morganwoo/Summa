@@ -13,7 +13,11 @@ struct HeatmapsView: View {
     let openPlan: () -> Void
     let openJourney: (JourneySheet) -> Void
 
+    @EnvironmentObject private var store: Store
     @State private var undoTarget: Habit? = nil
+    @State private var selectedDay: DayKey? = nil
+    @State private var capturing = false
+    @State private var paywall: PaywallContext? = nil
     @State private var undoToken = 0
 
     private let milestones: [Int: String] = [
@@ -35,7 +39,9 @@ struct HeatmapsView: View {
                 if !habits.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Eyebrow("All habits · 90 days")
-                        OverallHeatmap(timelines: timelines, planStart: plan.start, today: today)
+                        // `store.isPro` is read so the gold marks appear or withdraw the moment the tier changes.
+                        OverallHeatmap(timelines: timelines, planStart: plan.start, today: today,
+                                       reflectionDays: store.isPro ? ReflectionStore.days(for: plan) : [], selection: $selectedDay)
                         OverallLegend()
                     }
                     .card()
@@ -83,7 +89,26 @@ struct HeatmapsView: View {
             .padding(.top, 8)
             .padding(.bottom, 90)
         }
+        .overlay(alignment: .bottomLeading) {
+            // Pro opens the journal; Free is taken to the subscription page.
+            JournalButton { if store.isPro { capturing = true } else { paywall = .reflections } }
+                .padding(.leading, 16)
+                .padding(.bottom, undoTarget == nil ? 6 : 104)
+        }
         .overlay(alignment: .bottom) { undoBanner(today: today) }
+        .sheet(item: $paywall) { SummaProView(context: $0).environment(\.theme, theme) }
+        .sheet(isPresented: Binding(get: { selectedDay != nil }, set: { if !$0 { selectedDay = nil } })) {
+            if let selectedDay {
+                DayDetailSheet(plan: plan, day: selectedDay)
+                    .presentationDetents([.medium, .large])
+                    .environment(\.theme, theme)
+            }
+        }
+        .sheet(isPresented: $capturing) {
+            CaptureSheet(plan: plan)
+                .presentationDetents([.medium, .large])
+                .environment(\.theme, theme)
+        }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: undoTarget?.id)
     }
 
@@ -97,6 +122,7 @@ struct HeatmapsView: View {
                 Spacer()
                 Text(today.formatted(.dateTime.weekday(.wide).month(.wide).day()))
                     .font(.footnote).foregroundStyle(theme.muted)
+                    .padding(.trailing, 52) // clear of the settings gear in the corner
             }
             Text("Keep your word.")
                 .font(SummaFont.serif(38, relativeTo: .largeTitle))

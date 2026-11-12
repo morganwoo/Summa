@@ -149,6 +149,11 @@ struct StageCelebration: View {
 enum StageMemory {
     private static func key(_ plan: Plan) -> String { "summa.stageCelebrated.\(plan.id.uuidString)" }
 
+    /// Forgets what has been celebrated for one plan, so its stage celebrations play again.
+    static func reset(planID: UUID) {
+        UserDefaults.standard.removeObject(forKey: "summa.stageCelebrated.\(planID.uuidString)")
+    }
+
     /// Returns the stage to celebrate now, and records it so it is shown only once.
     static func stageToCelebrate(for plan: Plan, today: DayKey) -> Stage? {
         guard !plan.isFinished(today: today), !AppEnvironment.arguments.contains("-skipStageCelebration") else { return nil }

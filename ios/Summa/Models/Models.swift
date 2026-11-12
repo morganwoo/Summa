@@ -23,6 +23,9 @@ final class Plan {
     @Relationship(deleteRule: .cascade, inverse: \Habit.plan) var habits: [Habit] = []
     @Relationship(deleteRule: .cascade, inverse: \Milestone.plan) var milestones: [Milestone] = []
     @Relationship(deleteRule: .cascade, inverse: \ProgressPhoto.plan) var photos: [ProgressPhoto] = []
+    /// Private journal entries. Read them through `ReflectionStore`, which checks the entitlement.
+    @Relationship(deleteRule: .cascade, inverse: \Reflection.plan) var reflections: [Reflection] = []
+    @Relationship(deleteRule: .cascade, inverse: \Victory.plan) var victories: [Victory] = []
 
     init(objective: String, userName: String, username: String = "", answers: OnboardingAnswers? = nil,
          startDay: DayKey, phases: [PhaseDraft], source: String) {
@@ -218,6 +221,69 @@ final class ProgressPhoto {
     }
 }
 
+/// A private journal entry for one day of one journey. Never shared with friends or sent to the social backend.
+@Model
+final class Reflection {
+    @Attribute(.unique) var id: UUID
+    var text: String
+    /// 1...90 within its journey.
+    var dayNumber: Int
+    /// The civil date it belongs to, as `yyyy-MM-dd`.
+    var day: String
+    var createdAt: Date
+    var updatedAt: Date
+    /// The plan (journey) it was written in. Kept as a value too, so the link survives on its own.
+    var journeyID: UUID
+    var chapter: Int
+    /// The signed-in account at the time of writing, or "device" when there was none.
+    var ownerID: String
+    /// True when the text began as a suggestion from the companion and was approved by the person.
+    var fromCompanion: Bool = false
+    /// Set once this entry has been promoted to a victory, so it cannot be promoted twice.
+    var victoryID: UUID?
+    var plan: Plan?
+
+    init(text: String, dayNumber: Int, day: DayKey, journeyID: UUID, chapter: Int, ownerID: String, fromCompanion: Bool) {
+        self.id = UUID()
+        self.text = text
+        self.dayNumber = dayNumber
+        self.day = day.string
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.journeyID = journeyID
+        self.chapter = chapter
+        self.ownerID = ownerID
+        self.fromCompanion = fromCompanion
+    }
+}
+
+/// A meaningful win kept in Your Colosseum. Private, like everything else in the journal.
+@Model
+final class Victory {
+    @Attribute(.unique) var id: UUID
+    var text: String
+    var dayNumber: Int
+    var day: String
+    var createdAt: Date
+    /// The reflection this was promoted from, when there was one.
+    var sourceReflectionID: UUID?
+    /// A `VictoryCategory` raw value. Empty on older entries, which are then read from their words.
+    var category: String = ""
+    var plan: Plan?
+
+    var kind: VictoryCategory { VictoryCategory(loose: category) ?? VictoryCategory.classify(text) }
+
+    init(text: String, dayNumber: Int, day: String, sourceReflectionID: UUID?) {
+        self.id = UUID()
+        self.text = text
+        self.dayNumber = dayNumber
+        self.day = day
+        self.createdAt = Date()
+        self.sourceReflectionID = sourceReflectionID
+    }
+}
+
 enum SummaSchema {
-    static let models: [any PersistentModel.Type] = [Plan.self, Habit.self, ScheduleVersion.self, CheckIn.self, Milestone.self, ProgressPhoto.self]
+    static let models: [any PersistentModel.Type] = [Plan.self, Habit.self, ScheduleVersion.self, CheckIn.self, Milestone.self, ProgressPhoto.self,
+                                                     Reflection.self, Victory.self]
 }

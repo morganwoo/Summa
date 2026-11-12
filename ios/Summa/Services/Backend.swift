@@ -336,7 +336,7 @@ final class Backend: ObservableObject {
 
     /// Syncs shortly after a change. Failures are silent: the next change or launch tries again.
     func scheduleSync(plan: Plan) {
-        guard config != nil, session != nil else { return }
+        guard config != nil, session != nil, !DevSandbox.isActive else { return }
         pendingSync?.cancel()
         pendingSync = Task { [weak self] in
             try? await Task.sleep(for: .seconds(3))

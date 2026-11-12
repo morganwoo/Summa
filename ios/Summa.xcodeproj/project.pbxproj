@@ -47,11 +47,11 @@
 		2220B895B0744D0A247A2464 /* Summa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Summa.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		32871EB8C6C1EFA901F439D3 /* SummaWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SummaWidget.entitlements; sourceTree = "<group>"; };
 		489A50D3A358E372B3E24BAD /* SummaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SummaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A77C0F1E2D3B4A5968778C1 /* Summa.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Summa.xcconfig; sourceTree = "<group>"; };
 		6041629F1A3EE6A93ED270C6 /* Summa.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Summa.entitlements; sourceTree = "<group>"; };
 		8B2713DFD5A3BB0B8CE78B9F /* SummaWidget-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SummaWidget-Info.plist"; sourceTree = "<group>"; };
 		B45E1F86463017B7995CB8A9 /* SummaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SummaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF6DCA000D6F6A9113C11517 /* Summa-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Summa-Info.plist"; sourceTree = "<group>"; };
-		5A77C0F1E2D3B4A5968778C1 /* Summa.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Summa.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */

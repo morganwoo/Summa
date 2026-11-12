@@ -17,7 +17,9 @@ struct FriendsView: View {
                     Eyebrow("Friends")
                     Text("Kept together.").font(SummaFont.serif(36, relativeTo: .largeTitle)).accessibilityAddTraits(.isHeader)
                 }
-                if backend.config == nil {
+                if DevSandbox.isActive {
+                    notice("Friends is off in the developer preview.", "Preview data is never sent to the server or shown to friends.")
+                } else if backend.config == nil {
                     notice("Friends is not connected in this build.",
                            "The social backend has not been configured yet. Your own tracking is unaffected.")
                 } else if !backend.isSignedIn {
@@ -189,9 +191,12 @@ private struct FriendsHome: View {
             HStack {
                 Text(backend.username.map { "@\($0)" } ?? "Signed in").font(.footnote).foregroundStyle(theme.muted)
                 Spacer()
-                Button { showAccount = true } label: { Label("Privacy and account", systemImage: "lock.shield") }
-                    .font(.footnote.weight(.semibold)).foregroundStyle(theme.gold).frame(minHeight: 44)
-                    .accessibilityIdentifier("friends.account")
+                Button { showAccount = true } label: {
+                    Image(systemName: "line.3.horizontal").font(.title3.weight(.medium))
+                        .foregroundStyle(theme.gold).frame(width: 44, height: 44).contentShape(Rectangle())
+                }
+                .accessibilityLabel("Account menu")
+                .accessibilityIdentifier("friends.account")
             }
             if needsUsername { usernameCard }
             counter
@@ -587,11 +592,22 @@ private struct SocialAccountSheet: View {
     @State private var username = ""
     @State private var message: String? = nil
     @State private var confirmDelete = false
+    @State private var confirmLogOut = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Eyebrow("Account")
+                        Text(backend.username.map { "@\($0)" } ?? "No username yet").font(SummaFont.serif(24, relativeTo: .title3))
+                        if let email = backend.session?.email {
+                            Text(email).font(.footnote).foregroundStyle(theme.muted).accessibilityIdentifier("account.email")
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .card()
+
                     VStack(alignment: .leading, spacing: 10) {
                         Eyebrow("What friends can see")
                         Toggle("Share my heatmap and leaderboard place", isOn: $shareHeatmap)
@@ -628,21 +644,28 @@ private struct SocialAccountSheet: View {
 
                     if let message { Text(message).font(.footnote).foregroundStyle(theme.muted) }
 
+                    Button("Log Out") { confirmLogOut = true }
+                        .buttonStyle(.summaSecondary)
+                        .accessibilityIdentifier("account.logout")
+
                     VStack(alignment: .leading, spacing: 10) {
-                        Eyebrow("Account")
-                        if let email = backend.session?.email { Text(email).font(.footnote).foregroundStyle(theme.muted) }
-                        Button("Sign out") { Task { await backend.signOut(); dismiss() } }.buttonStyle(.summaSecondary)
-                        Button("Delete my account", role: .destructive) { confirmDelete = true }
-                            .font(.subheadline.weight(.semibold)).frame(minHeight: 44)
-                            .accessibilityIdentifier("account.delete")
-                        Text("Deleting removes your profile, friendships, shared progress, and nudges from the server. Your plan and check-ins on this device are kept.")
+                        Text("DELETE ACCOUNT").font(.caption.weight(.semibold)).tracking(1.5).foregroundStyle(.red)
+                        Text("Deleting removes your account, profile, friendships, shared progress, and nudges from the server. It cannot be undone. Your plan and check-ins on this device are kept.")
                             .font(.footnote).foregroundStyle(theme.muted)
+                        Button(role: .destructive) { confirmDelete = true } label: {
+                            Label("Delete Account", systemImage: "trash").font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                        }
+                        .foregroundStyle(.red)
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.red.opacity(0.6)))
+                        .accessibilityIdentifier("account.delete")
                     }
                     .card()
                 }
                 .padding(20)
             }
             .marbleBackground()
+            .navigationTitle("Account")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
@@ -651,11 +674,17 @@ private struct SocialAccountSheet: View {
         .onChange(of: shareHeatmap) { _, _ in pushPrivacy() }
         .onChange(of: shareActivity) { _, _ in pushPrivacy() }
         .onChange(of: nudgesMuted) { _, _ in pushPrivacy() }
+        .confirmationDialog("Log out of Summa Friends?", isPresented: $confirmLogOut, titleVisibility: .visible) {
+            Button("Log Out") { Task { await backend.signOut(); dismiss() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your plan and check-ins stay on this device.")
+        }
         .confirmationDialog("Delete your account?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete account", role: .destructive) { run { try await backend.deleteAccount(); dismiss() } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This cannot be undone.")
+            Text("Your account and everything stored for it on the server will be permanently deleted. This cannot be undone.")
         }
     }
 

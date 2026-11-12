@@ -651,3 +651,143 @@ private func profile(focus: [String] = [], objective: String = "", obstacles: [S
         #expect(parse("summa://auth/callback?code=" + String(repeating: "a", count: 600)) == .failed(.unusable))
     }
 }
+
+@Suite struct ReflectionTests {
+    @Test func textIsTrimmedAndClipped() {
+        #expect(ReflectionRule.normalized("  held the line today \n") == "held the line today")
+        #expect(!ReflectionRule.isSavable("   \n "))
+        #expect(ReflectionRule.normalized(String(repeating: "a", count: 5000)).count == ReflectionRule.maxLength)
+    }
+
+    @Test func reflectionsNeedProAndSurviveALapse() {
+        #expect(ReflectionAccess.denial(isPro: false) == .proRequired)
+        #expect(ReflectionAccess.denial(isPro: true) == nil)
+        let saved = ["one", "two"]
+        #expect(ReflectionAccess.visible(saved, isPro: false).isEmpty)
+        // The same saved entries come back untouched when Pro returns.
+        #expect(ReflectionAccess.visible(saved, isPro: true) == saved)
+    }
+
+    @Test func companionHasADailyAllowance() {
+        #expect(CompanionLimit.remaining(usedToday: 0) == CompanionLimit.messagesPerDay)
+        #expect(CompanionLimit.canSend(usedToday: CompanionLimit.messagesPerDay - 1))
+        #expect(!CompanionLimit.canSend(usedToday: CompanionLimit.messagesPerDay))
+        #expect(CompanionLimit.remaining(usedToday: 999) == 0)
+    }
+
+    @Test func aProposalIsOnlyADraft() throws {
+        let decoded = try JSONDecoder().decode(CompanionReply.self, from: Data(#"{"reply":"That took patience.","proposedReflection":"  I stayed calm in the meeting. "}"#.utf8))
+        #expect(decoded.draft == "I stayed calm in the meeting.")
+        #expect(try JSONDecoder().decode(CompanionReply.self, from: Data(#"{"reply":"Tell me more.","proposedReflection":null}"#.utf8)).draft == nil)
+        #expect(CompanionReply(reply: "Go on.", proposedReflection: "   ").draft == nil)
+    }
+}
+
+@Suite struct DevScenarioTests {
+    private func graduation(percent: Int) -> GraduationResult {
+        let start = DayKey(year: 2026, month: 1, day: 5)
+        let offsets = DevScenario.completedOffsets(habits: 3, resolvedDays: 90, percent: percent)
+        let timelines = offsets.map { days in
+            HabitTimeline(planStart: start, habitStart: start, archivedOn: nil,
+                          rules: [ScheduleRule(effectiveFrom: start, weekdays: .everyDay)],
+                          completed: Set(days.map { start.adding($0) }))
+        }
+        return Graduation.evaluate(timelines: timelines)
+    }
+
+    @Test func seventyNinePercentDoesNotGraduate() {
+        let result = graduation(percent: 79)
+        #expect(result.scheduled == 270)
+        #expect(result.completed == 213)
+        #expect(result.percent == 78 || result.percent == 79)
+        #expect(!result.eligible)
+    }
+
+    @Test func eightyPercentGraduatesExactlyAtTheThreshold() {
+        let result = graduation(percent: 80)
+        #expect(result.completed == 216)
+        #expect(result.percent == 80)
+        #expect(result.eligible)
+        #expect(!graduationOneShort())
+    }
+
+    private func graduationOneShort() -> Bool {
+        // 215 of 270 is 79.6%: it must not round up into a graduation.
+        GraduationResult(completed: 215, scheduled: 270, percent: 79, eligible: 215 * 100 >= Graduation.threshold * 270).eligible
+    }
+
+    @Test func aHundredPercentGraduates() {
+        let result = graduation(percent: 100)
+        #expect(result.completed == 270)
+        #expect(result.eligible)
+    }
+
+    @Test func theThresholdFollowsScheduledActivitiesNotAFixedCount() {
+        // A weekday-only habit has fewer scheduled days; 80% of those still graduates.
+        let start = DayKey(year: 2026, month: 1, day: 5) // a Monday
+        let rule = ScheduleRule(effectiveFrom: start, weekdays: .weekdays)
+        let all = HabitTimeline(planStart: start, habitStart: start, archivedOn: nil, rules: [rule], completed: [])
+        let scheduled = all.days.filter { all.status(on: $0, today: all.planEnd.adding(1)) != .unscheduled }
+        let keep = DevScenario.completedCount(scheduled: scheduled.count, percent: 80)
+        let done = HabitTimeline(planStart: start, habitStart: start, archivedOn: nil, rules: [rule], completed: Set(scheduled.prefix(keep)))
+        let result = Graduation.evaluate(timelines: [done])
+        #expect(result.scheduled == scheduled.count)
+        #expect(result.scheduled < 90)
+        #expect(result.eligible == (keep * 100 >= 80 * scheduled.count))
+        let short = HabitTimeline(planStart: start, habitStart: start, archivedOn: nil, rules: [rule], completed: Set(scheduled.prefix(keep - 2)))
+        #expect(!Graduation.evaluate(timelines: [short]).eligible)
+    }
+
+    @Test func stagesChangeOnDays22And67() {
+        #expect(Stage.forDay(21) == .foundation)
+        #expect(Stage.forDay(22) == .momentum)
+        #expect(Stage.forDay(66) == .momentum)
+        #expect(Stage.forDay(67) == .transformation)
+        #expect(Stage.toCelebrate(current: .momentum, lastCelebrated: Stage.foundation.rawValue) == .momentum)
+        #expect(Stage.toCelebrate(current: .momentum, lastCelebrated: Stage.momentum.rawValue) == nil)
+        #expect(Stage.toCelebrate(current: .transformation, lastCelebrated: Stage.momentum.rawValue) == .transformation)
+        #expect(DevScenario.presetDays == [1, 21, 22, 66, 67, 89, 90])
+    }
+}
+
+@Suite struct VictoryCategoryTests {
+    @Test func wordsChooseTheEmblem() {
+        #expect(VictoryCategory.classify("Ran my first 10k without stopping") == .physical)
+        #expect(VictoryCategory.classify("Passed my physics midterm") == .reckoning)
+        #expect(VictoryCategory.classify("Solved the calculus proof on my own") == .reckoning)
+        #expect(VictoryCategory.classify("Finished the biology lab report") == .science)
+        #expect(VictoryCategory.classify("Read forty pages of Meditations") == .letters)
+        #expect(VictoryCategory.classify("Paid off my credit card debt") == .wealth)
+        #expect(VictoryCategory.classify("Got a raise after the math tutoring review") == .wealth)
+    }
+
+    @Test func anythingElseGetsTheSwords() {
+        #expect(VictoryCategory.classify("Told my brother the truth") == .physical)
+        #expect(VictoryCategory.classify("") == .physical)
+    }
+
+    @Test func aModelSuppliedCategoryIsOnlyUsedWhenValid() throws {
+        #expect(VictoryCategory(loose: " Wealth ") == .wealth)
+        #expect(VictoryCategory(loose: "astrology") == nil)
+        #expect(VictoryCategory(loose: nil) == nil)
+        let reply = try JSONDecoder().decode(CompanionReply.self, from: Data(#"{"reply":"Well earned.","proposedReflection":"I ran 10k.","proposedCategory":"physical"}"#.utf8))
+        #expect(reply.category == .physical)
+        #expect(CompanionReply(reply: "x", proposedReflection: "y", proposedCategory: "nonsense").category == nil)
+        #expect(VictoryCategory.allCases.count == 5)
+    }
+}
+
+@Suite struct RomanNumeralTests {
+    @Test func numeralsAreWrittenCorrectly() {
+        #expect(RomanNumeral.string(1) == "I")
+        #expect(RomanNumeral.string(4) == "IV")
+        #expect(RomanNumeral.string(9) == "IX")
+        #expect(RomanNumeral.string(14) == "XIV")
+        #expect(RomanNumeral.string(22) == "XXII")
+        #expect(RomanNumeral.string(67) == "LXVII")
+        #expect(RomanNumeral.string(90) == "XC")
+        #expect(RomanNumeral.string(2026) == "MMXXVI")
+        #expect(RomanNumeral.string(0) == "0")
+        #expect(RomanNumeral.string(4000) == "4000")
+    }
+}

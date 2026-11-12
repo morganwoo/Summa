@@ -198,35 +198,124 @@ extension DayCellRenderer {
     }
 }
 
+extension DayCellRenderer {
+    /// A brighter gold than any stage color, so the mark for a reflected day still reads on a gold Transformation day.
+    static let reflectionGold = Color(hex: "#F6D98A")
+
+    /// A still, soft halo with a fine ring. Drawn once; nothing here animates.
+    static func drawReflectionGlow(around rect: CGRect, context: inout GraphicsContext, bright: Bool) {
+        let radius = rect.width * 0.24
+        let spread = rect.width * 0.16
+        let halo = Path(roundedRect: rect.insetBy(dx: -spread, dy: -spread), cornerRadius: radius + spread, style: .continuous)
+        context.drawLayer { layer in
+            layer.addFilter(.blur(radius: max(1.5, rect.width * 0.14)))
+            layer.fill(halo, with: .color(reflectionGold.opacity(bright ? 0.95 : 0.6)))
+        }
+    }
+
+    static func drawReflectionRing(around rect: CGRect, context: inout GraphicsContext, bright: Bool) {
+        let radius = rect.width * 0.24
+        context.stroke(Path(roundedRect: rect.insetBy(dx: -1.5, dy: -1.5), cornerRadius: radius + 1.5, style: .continuous),
+                       with: .color(reflectionGold.opacity(bright ? 1 : 0.9)), lineWidth: bright ? 1.6 : 1.1)
+    }
+}
+
 /// The whole program in one grid: every habit combined, each day tinted by its stage.
+///
+/// Days with a saved reflection carry a still gold halo. When `selection` is given, tapping a day
+/// lifts its tile slightly, like a pressed and embossed tile, and it stays lifted while that day is open.
 struct OverallHeatmap: View {
     @Environment(\.theme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let timelines: [HabitTimeline]
     let planStart: DayKey
     let today: DayKey
+    var reflectionDays: Set<DayKey> = []
+    var selection: Binding<DayKey?>? = nil
+
+    /// The last tile that was lifted. It stays in place while it settles back down.
+    @State private var raised: DayKey? = nil
 
     private var leadingBlanks: Int { (planStart.weekday + 5) % 7 }
     private var columns: Int { Int((Double(leadingBlanks + HabitTimeline.planLength) / 7).rounded(.up)) }
+    private let gap: CGFloat = 0.2
+    /// Room around the grid for halos and for the lifted tile.
+    private let margin: CGFloat = 5
+
+    /// `width` is the width of the grid itself; the canvas is drawn `margin` wider on every side.
+    private func cellSide(width: CGFloat) -> CGFloat { width / (CGFloat(columns) + CGFloat(columns - 1) * gap) }
+
+    private func rect(index: Int, width: CGFloat) -> CGRect {
+        let cell = cellSide(width: width)
+        let step = cell * (1 + gap)
+        let slot = index + leadingBlanks
+        return CGRect(x: CGFloat(slot / 7) * step, y: CGFloat(slot % 7) * step, width: cell, height: cell)
+    }
+
+    private func dayIndex(at point: CGPoint, width: CGFloat) -> Int? {
+        let step = cellSide(width: width) * (1 + gap)
+        let column = Int(floor(point.x / step)), row = Int(floor(point.y / step))
+        guard column >= 0, column < columns, row >= 0, row < 7 else { return nil }
+        let index = column * 7 + row - leadingBlanks
+        return (0..<HabitTimeline.planLength).contains(index) ? index : nil
+    }
 
     var body: some View {
-        let gap: CGFloat = 0.2
-        let aspect = (CGFloat(columns) + CGFloat(columns - 1) * gap) / (7 + 6 * gap)
-        Canvas { context, size in
-            let cell = size.width / (CGFloat(columns) + CGFloat(columns - 1) * gap)
-            let step = cell * (1 + gap)
-            for index in 0..<HabitTimeline.planLength {
-                let day = planStart.adding(index)
-                let slot = index + leadingBlanks
-                let rect = CGRect(x: CGFloat(slot / 7) * step, y: CGFloat(slot % 7) * step, width: cell, height: cell)
-                DayCellRenderer.draw(PlanProgress.day(day, timelines: timelines, today: today), in: rect, context: &context,
-                                     accent: Stage.forDay(index + 1).color, theme: theme, isToday: day == today)
+        let grid = (CGFloat(columns) + CGFloat(columns - 1) * gap) / (7 + 6 * gap)
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            ZStack(alignment: .topLeading) {
+                Canvas { context, size in
+                    for index in 0..<HabitTimeline.planLength {
+                        let day = planStart.adding(index)
+                        let cellRect = rect(index: index, width: size.width - margin * 2).offsetBy(dx: margin, dy: margin)
+                        let reflected = reflectionDays.contains(day)
+                        if reflected { DayCellRenderer.drawReflectionGlow(around: cellRect, context: &context, bright: false) }
+                        DayCellRenderer.draw(PlanProgress.day(day, timelines: timelines, today: today), in: cellRect, context: &context,
+                                             accent: Stage.forDay(index + 1).color, theme: theme, isToday: day == today)
+                        if reflected { DayCellRenderer.drawReflectionRing(around: cellRect, context: &context, bright: false) }
+                    }
+                }
+                .padding(-margin)
+                if let raised, selection != nil {
+                    let index = planStart.days(until: raised)
+                    let cellRect = rect(index: index, width: width)
+                    RaisedTile(day: PlanProgress.day(raised, timelines: timelines, today: today), accent: Stage.forDay(index + 1).color,
+                               isToday: raised == today, reflected: reflectionDays.contains(raised),
+                               isSelected: selection?.wrappedValue == raised, side: cellRect.width)
+                        .position(x: cellRect.midX, y: cellRect.midY)
+                        .id(raised)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
             }
+            .contentShape(Rectangle())
+            .gesture(SpatialTapGesture().onEnded { value in
+                guard let selection, let index = dayIndex(at: value.location, width: width) else { return }
+                let day = planStart.adding(index)
+                Haptics.select()
+                selection.wrappedValue = selection.wrappedValue == day ? nil : day // one day at a time
+            }, including: selection == nil ? .subviews : .all)
         }
-        .aspectRatio(aspect, contentMode: .fit)
-        .padding(3)
+        .aspectRatio(grid, contentMode: .fit)
+        .padding(margin)
+        .onChange(of: selection?.wrappedValue) { _, selected in
+            if let selected { raised = selected }
+        }
         .accessibilityElement()
         .accessibilityLabel("90-day heatmap for all habits")
         .accessibilityValue(summary)
+        .accessibilityHint(selection == nil ? "" : "Swipe up or down to choose a day, then double tap to open it")
+        .accessibilityAdjustableAction { direction in
+            guard selection != nil else { return }
+            let current = raised ?? min(max(today, planStart), planStart.adding(HabitTimeline.planLength - 1))
+            let next = current.adding(direction == .increment ? 1 : -1)
+            if (0..<HabitTimeline.planLength).contains(planStart.days(until: next)) { raised = next }
+        }
+        .accessibilityAction {
+            guard let selection else { return }
+            selection.wrappedValue = raised ?? min(max(today, planStart), planStart.adding(HabitTimeline.planLength - 1))
+        }
         .accessibilityIdentifier("overall.heatmap")
     }
 
@@ -241,7 +330,55 @@ struct OverallHeatmap: View {
         var parts = ["\(counts[.completed, default: 0]) days fully done", "\(counts[.partial, default: 0]) partly done",
                      "\(counts[.missed, default: 0]) missed", "\(counts[.rest, default: 0]) rest days"]
         if todayPart.scheduled > 0 { parts.append("Today: \(todayPart.completed) of \(todayPart.scheduled) done") }
+        if !reflectionDays.isEmpty { parts.append("\(reflectionDays.count) days with a reflection") }
+        if let raised, selection != nil {
+            let number = planStart.days(until: raised) + 1
+            let status = PlanProgress.day(raised, timelines: timelines, today: today).status.label
+            parts.insert("Day \(number), \(raised.formatted()): \(status)\(reflectionDays.contains(raised) ? ", has a reflection" : "")", at: 0)
+        }
         return parts.joined(separator: ", ")
+    }
+}
+
+/// The selected day, drawn on top of the grid and lifted to about 1.10 times its size with a soft shadow.
+/// It rises when chosen and settles when the day is closed. With Reduce Motion it is outlined in place instead.
+private struct RaisedTile: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let day: PlanDay
+    let accent: Color
+    let isToday: Bool
+    let reflected: Bool
+    let isSelected: Bool
+    let side: CGFloat
+
+    @State private var lifted = false
+    private let pad: CGFloat = 6
+    private var spring: Animation { .spring(response: 0.24, dampingFraction: 0.72) }
+
+    var body: some View {
+        Canvas { context, size in
+            let cellRect = CGRect(x: pad, y: pad, width: size.width - pad * 2, height: size.height - pad * 2)
+            // Cover the tile underneath so the lifted copy is the only one seen.
+            context.fill(Path(roundedRect: cellRect, cornerRadius: cellRect.width * 0.24, style: .continuous), with: .color(theme.surface))
+            if reflected { DayCellRenderer.drawReflectionGlow(around: cellRect, context: &context, bright: lifted) }
+            DayCellRenderer.draw(day, in: cellRect, context: &context, accent: accent, theme: theme, isToday: isToday)
+            if reflected { DayCellRenderer.drawReflectionRing(around: cellRect, context: &context, bright: lifted) }
+            if lifted && !reflected {
+                context.stroke(Path(roundedRect: cellRect.insetBy(dx: -1.5, dy: -1.5), cornerRadius: cellRect.width * 0.24 + 1.5, style: .continuous),
+                               with: .color(theme.gold), lineWidth: 1.4)
+            }
+        }
+        .frame(width: side + pad * 2, height: side + pad * 2)
+        .scaleEffect(lifted && !reduceMotion ? 1.10 : 1)
+        .shadow(color: .black.opacity(lifted ? (theme.isDark ? 0.55 : 0.28) : 0), radius: lifted ? 4 : 0, x: 0, y: lifted ? 2.5 : 0)
+        .opacity(lifted || isSelected ? 1 : 0)
+        .onAppear { set(isSelected) }
+        .onChange(of: isSelected) { _, selected in set(selected) }
+    }
+
+    private func set(_ selected: Bool) {
+        if reduceMotion { lifted = selected } else { withAnimation(spring) { lifted = selected } }
     }
 }
 

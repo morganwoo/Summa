@@ -14,6 +14,9 @@ struct SettingsView: View {
     @State private var notificationAccess: Reminders.Access = .undetermined
     @State private var confirmRestart = false
     @State private var paywall: PaywallContext? = nil
+    #if DEBUG
+    @State private var showDeveloper = false
+    #endif
 
     var body: some View {
         ScrollView {
@@ -98,9 +101,24 @@ struct SettingsView: View {
                     Button("Erase all data", role: .destructive) { confirmRestart = true }
                         .font(.subheadline.weight(.semibold))
                         .frame(minHeight: 44)
+                        .disabled(DevSandbox.isActive)
                         .accessibilityIdentifier("settings.restart")
                 }
                 .card()
+
+                #if DEBUG
+                if !DevSandbox.isActive {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Eyebrow("Developer")
+                        Text("Preview any day, stage, graduation result, and tier with made-up data. Debug builds only; your real record is never touched.")
+                            .font(.footnote).foregroundStyle(theme.muted)
+                        Button("Developer testing") { showDeveloper = true }
+                            .buttonStyle(.summaSecondary)
+                            .accessibilityIdentifier("settings.developer")
+                    }
+                    .card()
+                }
+                #endif
 
                 Text("Memento mori. Memento vivere.")
                     .font(SummaFont.serifItalic(18, relativeTo: .footnote))
@@ -112,6 +130,13 @@ struct SettingsView: View {
             .padding(.bottom, 32)
         }
         .task { await refreshAccess() }
+        #if DEBUG
+        .sheet(isPresented: $showDeveloper) {
+            DevDashboardView()
+                .environment(\.theme, theme)
+                .environmentObject(clock).environmentObject(store).environmentObject(onboarding)
+        }
+        #endif
         .sheet(item: $paywall) { context in
             SummaProView(context: context).environment(\.theme, theme)
         }

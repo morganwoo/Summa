@@ -20,3 +20,15 @@ mirrored by `PlanSchema` in `ios/SummaCore`).
 - **Providers.** Any OpenAI-compatible chat completions endpoint via `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`
   (see `.env.example`). Without a key the service returns deterministic drafts.
 - **Accounts.** None in this version, so there is no server-side persistence and no per-user records to isolate.
+
+## Reflection companion (Summa Pro)
+
+`POST /v1/reflections/chat` powers "Talk to Summa". It uses the same `AI_*` settings as plan drafting.
+
+- The app sends its signed App Store transaction in `X-Summa-Transaction`. The server verifies it
+  (`src/entitlement.ts`) before calling the model; a client that only claims to be Pro gets `403 pro_required`.
+- `APPLE_ENVIRONMENT=Xcode` is for local StoreKit testing only: signatures are not checked. Never deploy with it.
+- For TestFlight or the App Store set `APPLE_ENVIRONMENT=Sandbox` or `Production`, `APPLE_BUNDLE_ID`, and
+  `APPLE_ROOT_CERT_FILE` (Apple Root CA - G3 from https://www.apple.com/certificateauthority/).
+- With `APPLE_ENVIRONMENT` unset the route answers `503 entitlement_not_configured`.
+- Limit: `COMPANION_DAILY_MAX` messages per install per day (default 40). Conversations are never logged or stored.

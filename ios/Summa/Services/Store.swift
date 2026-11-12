@@ -39,10 +39,27 @@ final class Store: ObservableObject {
     /// Test-only override; never set in a shipping configuration.
     private let forcedPro = AppEnvironment.arguments.contains("-proUnlocked")
 
+    /// The answer from StoreKit, kept apart from any developer preview override.
+    private var verifiedPro = false
+
+    #if DEBUG
+    /// Developer preview only: shows the app as Free or Pro without touching StoreKit, the cached
+    /// entitlement, or any subscription. Held in memory, cleared when the preview closes, and
+    /// compiled out of Release builds.
+    private(set) var debugOverride: Bool?
+    func setDebugOverride(_ value: Bool?) {
+        debugOverride = value
+        let now = value ?? verifiedPro
+        if now != isPro { isPro = now }
+    }
+    var isDebugPro: Bool { forcedPro || debugOverride == true }
+    #endif
+
     private init() {
         // The cached value only avoids a flash of the free state at launch; it is replaced
         // by the verified answer from StoreKit as soon as `start()` runs.
         isPro = forcedPro || UserDefaults.standard.bool(forKey: Self.cacheKey)
+        verifiedPro = isPro
     }
 
     /// Begins listening for renewals, refunds, and purchases approved outside the app.
@@ -74,6 +91,7 @@ final class Store: ObservableObject {
 
     func purchase(_ product: Product) async {
         guard !isWorking else { return }
+        guard !DevSandbox.isActive else { outcome = .failed("Purchases are off in the developer preview."); return }
         isWorking = true
         defer { isWorking = false }
         do {
@@ -101,6 +119,7 @@ final class Store: ObservableObject {
 
     func restore() async {
         guard !isWorking else { return }
+        guard !DevSandbox.isActive else { outcome = .failed("Purchases are off in the developer preview."); return }
         isWorking = true
         defer { isWorking = false }
         do {
@@ -130,7 +149,11 @@ final class Store: ObservableObject {
         activeProductID = best?.productID
         expirationDate = best?.expirationDate
         UserDefaults.standard.set(best != nil, forKey: Self.cacheKey)
-        let now = best != nil || forcedPro
+        verifiedPro = best != nil || forcedPro
+        var now = verifiedPro
+        #if DEBUG
+        now = debugOverride ?? verifiedPro
+        #endif
         if now != isPro { isPro = now }
     }
 

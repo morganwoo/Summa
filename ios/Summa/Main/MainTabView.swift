@@ -7,10 +7,12 @@ struct MainTabView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var clock: TodayClock
     @EnvironmentObject private var store: Store
+    @EnvironmentObject private var onboarding: OnboardingStore
     @Environment(\.modelContext) private var context
     let plan: Plan
 
-    private enum Screen: Hashable { case heatmaps, progress, friends, plan, settings }
+    private enum Screen: Hashable { case heatmaps, progress, friends, plan }
+    @State private var showSettings = false
     @State private var tab: Screen = .heatmaps
     @State private var selectedHabitID: UUID? = nil
     @State private var celebrating: Stage? = nil
@@ -46,10 +48,32 @@ struct MainTabView: View {
                 .tabItem { Label("Plan", systemImage: "scroll") }
                 .tag(Screen.plan)
 
-            SettingsView(plan: plan)
-                .background(StageBackground(stage: stage))
-                .tabItem { Label("Settings", systemImage: "gearshape") }
-                .tag(Screen.settings)
+        }
+        // Settings lives in the top-right corner of every screen, leaving four items in the dock.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack {
+                Spacer()
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape").font(.body.weight(.medium)).foregroundStyle(theme.gold)
+                        .frame(width: 44, height: 44)
+                        .background(theme.surface.opacity(0.9), in: Circle())
+                        .overlay(Circle().strokeBorder(theme.divider))
+                }
+                .accessibilityLabel("Settings")
+                .accessibilityIdentifier("nav.settings")
+            }
+            .padding(.horizontal, 16)
+        }
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
+                SettingsView(plan: plan)
+                    .marbleBackground()
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showSettings = false } } }
+            }
+            .foregroundStyle(theme.text)
+            .environment(\.theme, theme)
+            .environmentObject(clock).environmentObject(store).environmentObject(onboarding)
         }
         .toolbarBackground(theme.background.opacity(0.94), for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
