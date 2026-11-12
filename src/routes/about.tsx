@@ -19,9 +19,9 @@ export const Route = createFileRoute("/about")({
 });
 
 const phases = [
-  { d: "Days 1–21", t: "Resistance", p: "The mind bargains. You mark the square anyway." },
-  { d: "Days 22–66", t: "Stabilization", p: "The grid gains rhythm. Effort turns to routine." },
-  { d: "Days 67–90", t: "Automaticity", p: "The habit is no longer something you do. It is who you are." },
+  { d: "Days 1–21", t: "Foundation", p: "Establish your routine. Protect your focus from distractions." },
+  { d: "Days 22–66", t: "Momentum", p: "Practice consistently. Turn your effort into meaningful progress." },
+  { d: "Days 67–90", t: "Transformation", p: "Build on your routine. Carry your progress into who you are becoming." },
 ];
 
 function About() {
