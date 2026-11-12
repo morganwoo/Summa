@@ -41,7 +41,7 @@ function Index() {
       <WidgetsSection />
 
       {/* Heatmap */}
-      <section aria-label="Daily practice and ninety-day heatmaps" className="mx-auto grid max-w-6xl items-center gap-16 px-6 py-24 md:grid-cols-2 md:py-32">
+      <section aria-label="Daily practice and ninety-day heatmaps" className="mx-auto grid max-w-6xl items-start gap-16 px-6 py-24 md:grid-cols-2 md:py-32">
         <Reveal><ProgramPhone /></Reveal>
         <Reveal><Heatmap /></Reveal>
       </section>
