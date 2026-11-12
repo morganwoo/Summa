@@ -15,7 +15,8 @@ private func habit(_ title: String = "Read daily", weekdays: [Int] = [2, 3, 4, 5
         #expect(plan.habits[0].title == "Read daily")
         #expect(plan.habits[0].weekdays == [2, 4, 6])
         #expect(HabitPalette.isValidHex(plan.habits[0].colorHex))
-        #expect(plan.phases.map { $0.title } == ["Find your footing", "Settle into rhythm", "Make it yours"])
+        #expect(plan.phases.map { $0.title } == ["Foundation", "Momentum", "Transformation"])
+        #expect(plan.phases.map { $0.stage } == [.foundation, .momentum, .transformation])
     }
 
     @Test func aNewPlanHasExactlyThreeHabits() {
@@ -229,5 +230,87 @@ private func profile(focus: [String] = [], objective: String = "", obstacles: [S
         #expect(!HabitLimit.canAddHabit(activeCount: 4, isPro: false))
         #expect(HabitLimit.canAddHabit(activeCount: 3, isPro: true))
         #expect(HabitLimit.canAddHabit(activeCount: 40, isPro: true))
+    }
+}
+
+@Suite struct StageTests {
+    @Test func stagesDependOnlyOnTheProgramDay() {
+        #expect(Stage.forDay(1) == .foundation)
+        #expect(Stage.forDay(21) == .foundation)
+        #expect(Stage.forDay(22) == .momentum)
+        #expect(Stage.forDay(66) == .momentum)
+        #expect(Stage.forDay(67) == .transformation)
+        #expect(Stage.forDay(90) == .transformation)
+        #expect(Stage.forDay(0) == .foundation)
+        #expect(Stage.forDay(400) == .transformation)
+        #expect(Stage.allCases.map { $0.days.count }.reduce(0, +) == 90)
+        #expect(Set(Stage.allCases.map { $0.accentHex }).count == 3)
+    }
+
+    @Test func eachLaterStageIsCelebratedOnce() {
+        #expect(Stage.toCelebrate(current: .foundation, lastCelebrated: 0) == nil)
+        #expect(Stage.toCelebrate(current: .momentum, lastCelebrated: 1) == .momentum)
+        #expect(Stage.toCelebrate(current: .momentum, lastCelebrated: 2) == nil)
+        #expect(Stage.toCelebrate(current: .transformation, lastCelebrated: 2) == .transformation)
+        // Opening the app for the first time in weeks celebrates only the stage you are in.
+        #expect(Stage.toCelebrate(current: .transformation, lastCelebrated: 1) == .transformation)
+        #expect(Stage.toCelebrate(current: .transformation, lastCelebrated: 3) == nil)
+    }
+
+    @Test func oldPhaseTitlesStillMapToStages() throws {
+        let json = """
+        [{"title":"Find your footing","startDay":1,"endDay":21,"focus":"a"},{"title":"Settle into rhythm","startDay":22,"endDay":66,"focus":"b"},{"title":"Make it yours","startDay":67,"endDay":90,"focus":"c"}]
+        """
+        let phases = try JSONDecoder().decode([PhaseDraft].self, from: Data(json.utf8))
+        #expect(phases.map { $0.stage.name } == ["Foundation", "Momentum", "Transformation"])
+    }
+}
+
+@Suite struct PlanProgressTests {
+    private func key(_ s: String) -> DayKey { DayKey(s)! }
+
+    /// Two habits from Monday 2026-11-02: one daily, one on weekdays only.
+    private func timelines(daily: [String], weekdays: [String]) -> [HabitTimeline] {
+        let start = key("2026-11-02")
+        return [
+            HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: .everyDay)], completed: Set(daily.map { key($0) })),
+            HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: .weekdays)], completed: Set(weekdays.map { key($0) })),
+        ]
+    }
+
+    @Test func everyKindOfDayIsDistinguished() {
+        let t = timelines(daily: ["2026-11-02", "2026-11-03", "2026-11-07", "2026-11-09"], weekdays: ["2026-11-02"])
+        let today = key("2026-11-09") // Monday of week two
+        func status(_ s: String) -> PlanDay.Status { PlanProgress.day(key(s), timelines: t, today: today).status }
+        #expect(status("2026-11-02") == .completed) // both done
+        #expect(status("2026-11-03") == .partial)   // one of two
+        #expect(status("2026-11-04") == .missed)    // none of two
+        #expect(status("2026-11-07") == .completed) // Saturday: only the daily habit is due
+        #expect(status("2026-11-08") == .missed)
+        #expect(status("2026-11-09") == .current)   // today, one of two so far
+        #expect(status("2026-11-10") == .upcoming)
+        #expect(status("2026-11-01") == .rest)      // before the plan
+        let partial = PlanProgress.day(key("2026-11-03"), timelines: t, today: today)
+        #expect(partial.completed == 1)
+        #expect(partial.scheduled == 2)
+        #expect(partial.fraction == 0.5)
+        #expect(PlanProgress.day(today, timelines: t, today: today).fraction == 0.5)
+    }
+
+    @Test func todayBecomesCompletedOnlyWhenEverythingDueIsDone() {
+        let today = key("2026-11-02")
+        #expect(PlanProgress.day(today, timelines: timelines(daily: [], weekdays: []), today: today).status == .current)
+        #expect(PlanProgress.day(today, timelines: timelines(daily: ["2026-11-02"], weekdays: ["2026-11-02"]), today: today).status == .completed)
+        #expect(PlanProgress.day(today, timelines: [], today: today).status == .rest)
+    }
+
+    @Test func overallCompletionUsesRealRecordsAcrossHabits() {
+        let t = timelines(daily: ["2026-11-02", "2026-11-03", "2026-11-07"], weekdays: ["2026-11-02"])
+        // Through Sunday Nov 8: daily habit 7 scheduled, weekday habit 5 scheduled; 3 + 1 completed.
+        let result = PlanProgress.completion(timelines: t, today: key("2026-11-08"))
+        #expect(result.completed == 4)
+        #expect(result.scheduled == 12)
+        #expect(result.percent == 33)
+        #expect(PlanProgress.completion(timelines: [], today: key("2026-11-08")).percent == nil)
     }
 }

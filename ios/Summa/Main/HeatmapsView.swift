@@ -27,9 +27,18 @@ struct HeatmapsView: View {
         let today = clock.today
         let habits = plan.activeHabits
         let dayNumber = plan.dayNumber(today: today)
+        let timelines = plan.timelines
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                header(today: today, dayNumber: dayNumber)
+                header(today: today, dayNumber: dayNumber, timelines: timelines)
+                if !habits.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Eyebrow("All habits · 90 days")
+                        OverallHeatmap(timelines: timelines, planStart: plan.start, today: today)
+                        OverallLegend()
+                    }
+                    .card()
+                }
                 if plan.isFinished(today: today) {
                     finished
                 } else if let note = milestones[dayNumber] {
@@ -61,8 +70,11 @@ struct HeatmapsView: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: undoTarget?.id)
     }
 
-    private func header(today: DayKey, dayNumber: Int) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private func header(today: DayKey, dayNumber: Int, timelines: [HabitTimeline]) -> some View {
+        let stage = Stage.forDay(dayNumber)
+        let overall = PlanProgress.completion(timelines: timelines, today: today)
+        let percentText = overall.percent.map { "\($0)% COMPLETE" } ?? "NOTHING DUE YET"
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Wordmark()
                 Spacer()
@@ -73,17 +85,19 @@ struct HeatmapsView: View {
                 .font(SummaFont.serif(38, relativeTo: .largeTitle))
                 .accessibilityAddTraits(.isHeader)
             HStack {
-                Text("DAY \(dayNumber) OF \(HabitTimeline.planLength)")
+                Text("DAY \(dayNumber) OF \(HabitTimeline.planLength) · \(stage.name.uppercased())")
                 Spacer()
-                Text("\(Int((Double(dayNumber) / Double(HabitTimeline.planLength) * 100).rounded()))%")
+                Text(percentText).accessibilityIdentifier("overall.completion")
             }
             .font(.caption.weight(.medium)).tracking(1.6).foregroundStyle(theme.muted)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Day \(dayNumber) of \(HabitTimeline.planLength)")
+            .accessibilityLabel("Day \(dayNumber) of \(HabitTimeline.planLength), \(stage.name) stage. "
+                                + (overall.percent.map { "\($0) percent complete: \(overall.completed) of \(overall.scheduled) scheduled activities." } ?? "Nothing has been due yet."))
+            .accessibilityIdentifier("overall.completion")
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Rectangle().fill(theme.divider)
-                    Rectangle().fill(theme.gold).frame(width: proxy.size.width * CGFloat(dayNumber) / CGFloat(HabitTimeline.planLength))
+                    Rectangle().fill(stage.color).frame(width: proxy.size.width * CGFloat(dayNumber) / CGFloat(HabitTimeline.planLength))
                 }
             }
             .frame(height: 1.5)
@@ -134,7 +148,7 @@ struct HeatmapsView: View {
             .background(theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(theme.divider))
             .padding(.horizontal, 16)
-            .padding(.bottom, 10)
+            .padding(.bottom, 46)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }

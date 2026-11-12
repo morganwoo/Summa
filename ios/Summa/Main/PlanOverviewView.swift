@@ -33,11 +33,14 @@ struct PlanOverviewView: View {
                     ForEach(Array(plan.phases.enumerated()), id: \.offset) { index, phase in
                         let isCurrent = phase.contains(day: dayNumber) && !plan.isFinished(today: today)
                         HStack(alignment: .top, spacing: 12) {
-                            Rectangle().fill(isCurrent ? theme.gold : Color.clear).frame(width: 2)
+                            Rectangle().fill(isCurrent ? phase.stage.color : Color.clear).frame(width: 2)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(String(format: "DAYS %02d — %02d", phase.startDay, phase.endDay) + (isCurrent ? " · NOW" : ""))
                                     .font(.caption.weight(.semibold)).tracking(1.5).foregroundStyle(theme.gold)
-                                Text(phase.title).font(SummaFont.serif(24, relativeTo: .title3))
+                                HStack(spacing: 8) {
+                                    Circle().fill(phase.stage.color).frame(width: 9, height: 9).accessibilityHidden(true)
+                                    Text(phase.stage.name).font(SummaFont.serif(24, relativeTo: .title3))
+                                }
                                 Text(phase.focus).font(.subheadline).foregroundStyle(theme.muted)
                             }
                         }

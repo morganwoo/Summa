@@ -56,6 +56,14 @@ final class Plan {
     }
 
     func isFinished(today: DayKey) -> Bool { today > end }
+
+    func stage(today: DayKey) -> Stage { Stage.forDay(dayNumber(today: today)) }
+
+    /// Every habit's record, archived ones included, for program-wide progress.
+    var timelines: [HabitTimeline] {
+        let start = self.start
+        return habits.map { $0.timeline(planStart: start) }
+    }
 }
 
 @Model

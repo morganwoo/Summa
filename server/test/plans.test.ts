@@ -48,7 +48,7 @@ test("drafts a schema-valid plan in mock mode without credentials", async () => 
     assert.match(plan.habits[0]?.reason ?? "", /Finish four books.*low energy/);
     assert.deepEqual(plan.habits[0]?.weekdays, [2, 4, 6]);
     assert.deepEqual(plan.habits[0]?.reminder, { hour: 7, minute: 30 });
-    assert.deepEqual(plan.phases.map((phase) => phase.title), ["Find your footing", "Settle into rhythm", "Make it yours"]);
+    assert.deepEqual(plan.phases.map((phase) => phase.title), ["Foundation", "Momentum", "Transformation"]);
   });
 });
 

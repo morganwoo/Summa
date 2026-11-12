@@ -100,7 +100,10 @@ struct PlanReviewView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(String(format: "DAYS %02d — %02d", phase.startDay, phase.endDay))
                         .font(.caption.weight(.semibold)).tracking(1.5).foregroundStyle(theme.gold)
-                    Text(phase.title).font(SummaFont.serif(24, relativeTo: .title3))
+                    HStack(spacing: 8) {
+                        Circle().fill(phase.stage.color).frame(width: 9, height: 9).accessibilityHidden(true)
+                        Text(phase.stage.name).font(SummaFont.serif(24, relativeTo: .title3))
+                    }
                     Text(phase.focus).font(.subheadline).foregroundStyle(theme.muted)
                 }
                 .padding(.vertical, 14)

@@ -71,13 +71,16 @@ public struct PhaseDraft: Codable, Hashable, Sendable, Identifiable {
         let defaults = ["Build a start you can keep.", "Make consistency feel natural.", "Carry your discipline forward."]
         func text(_ i: Int) -> String { i < focus.count && !focus[i].trimmed.isEmpty ? focus[i].trimmed : defaults[i] }
         return [
-            PhaseDraft(title: "Find your footing", startDay: 1, endDay: 21, focus: text(0)),
-            PhaseDraft(title: "Settle into rhythm", startDay: 22, endDay: 66, focus: text(1)),
-            PhaseDraft(title: "Make it yours", startDay: 67, endDay: 90, focus: text(2)),
+            PhaseDraft(title: Stage.foundation.name, startDay: 1, endDay: 21, focus: text(0)),
+            PhaseDraft(title: Stage.momentum.name, startDay: 22, endDay: 66, focus: text(1)),
+            PhaseDraft(title: Stage.transformation.name, startDay: 67, endDay: 90, focus: text(2)),
         ]
     }
 
     public func contains(day: Int) -> Bool { (startDay...endDay).contains(day) }
+
+    /// The stage this phase belongs to. Plans saved before the stages were renamed still map correctly.
+    public var stage: Stage { Stage.forDay(startDay) }
 }
 
 public struct PlanDraft: Codable, Hashable, Sendable {

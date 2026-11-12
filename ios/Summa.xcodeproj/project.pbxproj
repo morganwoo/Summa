@@ -7,25 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D6F6E67380BAAD883FF2594A /* SummaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 08611A63CC560719C7A08DF4 /* SummaCore */; };
 		2435992251C8874F3B21308C /* SummaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 6C100F366313E9D1C6DD5E26 /* SummaCore */; };
 		BD996BC5EA39C54BA21A02BC /* SummaWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 489A50D3A358E372B3E24BAD /* SummaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D6F6E67380BAAD883FF2594A /* SummaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 08611A63CC560719C7A08DF4 /* SummaCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		C68EA13B4B60D86C78B2BB34 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 400F08EDB6E73C6E9C9A61A3 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = D4DF5330511FA67754CB063E;
-			remoteInfo = SummaWidgetExtension;
-		};
 		03435B5183F9680C3537DBC4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 400F08EDB6E73C6E9C9A61A3 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = A6846FD14740B8A809547328;
 			remoteInfo = Summa;
+		};
+		C68EA13B4B60D86C78B2BB34 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 400F08EDB6E73C6E9C9A61A3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D4DF5330511FA67754CB063E;
+			remoteInfo = SummaWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -45,18 +45,18 @@
 
 /* Begin PBXFileReference section */
 		2220B895B0744D0A247A2464 /* Summa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Summa.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		489A50D3A358E372B3E24BAD /* SummaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = wrapper.app-extension; includeInIndex = 0; path = SummaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		32871EB8C6C1EFA901F439D3 /* SummaWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SummaWidget.entitlements; sourceTree = "<group>"; };
+		489A50D3A358E372B3E24BAD /* SummaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SummaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6041629F1A3EE6A93ED270C6 /* Summa.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Summa.entitlements; sourceTree = "<group>"; };
+		8B2713DFD5A3BB0B8CE78B9F /* SummaWidget-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SummaWidget-Info.plist"; sourceTree = "<group>"; };
 		B45E1F86463017B7995CB8A9 /* SummaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SummaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF6DCA000D6F6A9113C11517 /* Summa-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Summa-Info.plist"; sourceTree = "<group>"; };
-		8B2713DFD5A3BB0B8CE78B9F /* SummaWidget-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SummaWidget-Info.plist"; sourceTree = "<group>"; };
-		6041629F1A3EE6A93ED270C6 /* Summa.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Summa.entitlements"; sourceTree = "<group>"; };
-		32871EB8C6C1EFA901F439D3 /* SummaWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SummaWidget.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		F9AE8A947350E6439BF36D8B /* Summa */ = {
+		2B397FCC24B9FF2D9527940C /* SummaUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Summa;
+			path = SummaUITests;
 			sourceTree = "<group>";
 		};
 		60D34B0850E0D6F1A7031486 /* SummaWidget */ = {
@@ -64,14 +64,21 @@
 			path = SummaWidget;
 			sourceTree = "<group>";
 		};
-		2B397FCC24B9FF2D9527940C /* SummaUITests */ = {
+		F9AE8A947350E6439BF36D8B /* Summa */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = SummaUITests;
+			path = Summa;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		080B8A9BAA61A5E8225F4DA5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7139ABB06B0ABB2B7B48B592 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -88,16 +95,19 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		080B8A9BAA61A5E8225F4DA5 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		7D7479AA810318F120AEAE68 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2220B895B0744D0A247A2464 /* Summa.app */,
+				489A50D3A358E372B3E24BAD /* SummaWidgetExtension.appex */,
+				B45E1F86463017B7995CB8A9 /* SummaUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		BD822EEF94A6D3C3636696D6 = {
 			isa = PBXGroup;
 			children = (
@@ -120,19 +130,32 @@
 			path = Config;
 			sourceTree = "<group>";
 		};
-		7D7479AA810318F120AEAE68 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				2220B895B0744D0A247A2464 /* Summa.app */,
-				489A50D3A358E372B3E24BAD /* SummaWidgetExtension.appex */,
-				B45E1F86463017B7995CB8A9 /* SummaUITests.xctest */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		01A9A2AB64C8D3086DF27C34 /* SummaUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 44BD2E5F23C05AB2295AE86E /* Build configuration list for PBXNativeTarget "SummaUITests" */;
+			buildPhases = (
+				2AEF21AA23D076B041E0F595 /* Sources */,
+				080B8A9BAA61A5E8225F4DA5 /* Frameworks */,
+				A085FB2BCCE2AE241A9B74CF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E87162349EBF1A8571CF995E /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				2B397FCC24B9FF2D9527940C /* SummaUITests */,
+			);
+			name = SummaUITests;
+			packageProductDependencies = (
+			);
+			productName = SummaUITests;
+			productReference = B45E1F86463017B7995CB8A9 /* SummaUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		A6846FD14740B8A809547328 /* Summa */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 443D678CCD31CBF58DCF53B3 /* Build configuration list for PBXNativeTarget "Summa" */;
@@ -181,29 +204,6 @@
 			productReference = 489A50D3A358E372B3E24BAD /* SummaWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		01A9A2AB64C8D3086DF27C34 /* SummaUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 44BD2E5F23C05AB2295AE86E /* Build configuration list for PBXNativeTarget "SummaUITests" */;
-			buildPhases = (
-				2AEF21AA23D076B041E0F595 /* Sources */,
-				080B8A9BAA61A5E8225F4DA5 /* Frameworks */,
-				A085FB2BCCE2AE241A9B74CF /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				E87162349EBF1A8571CF995E /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				2B397FCC24B9FF2D9527940C /* SummaUITests */,
-			);
-			name = SummaUITests;
-			packageProductDependencies = (
-			);
-			productName = SummaUITests;
-			productReference = B45E1F86463017B7995CB8A9 /* SummaUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -214,15 +214,15 @@
 				LastSwiftUpdateCheck = 1600;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					01A9A2AB64C8D3086DF27C34 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = A6846FD14740B8A809547328;
+					};
 					A6846FD14740B8A809547328 = {
 						CreatedOnToolsVersion = 16.0;
 					};
 					D4DF5330511FA67754CB063E = {
 						CreatedOnToolsVersion = 16.0;
-					};
-					01A9A2AB64C8D3086DF27C34 = {
-						CreatedOnToolsVersion = 16.0;
-						TestTargetID = A6846FD14740B8A809547328;
 					};
 				};
 			};
@@ -258,14 +258,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A3C0EA26DDF930F63A55824A /* Resources */ = {
+		A085FB2BCCE2AE241A9B74CF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A085FB2BCCE2AE241A9B74CF /* Resources */ = {
+		A3C0EA26DDF930F63A55824A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -275,13 +275,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		792D1471129B9F25392EEC77 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		1C4D58232A62FE3FDE5BC276 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -290,6 +283,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		2AEF21AA23D076B041E0F595 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		792D1471129B9F25392EEC77 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -312,6 +312,16 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		0DB0FAAC3B161E0C3C1502F3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = app.summa.Summa.UITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = Summa;
+			};
+			name = Debug;
+		};
 		11F6879A82D6E979D39C18CA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -344,6 +354,26 @@
 			};
 			name = Debug;
 		};
+		1C6E0B5775C9909452BF5B5A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Config/Summa.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Summa-Info.plist";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.summa.Summa;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
 		48E3752AE697E53717C012C1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -369,32 +399,22 @@
 			};
 			name = Release;
 		};
-		1C6E0B5775C9909452BF5B5A /* Debug */ = {
+		4A30E97097EC72C018F7CC36 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Config/Summa.entitlements";
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Config/Summa-Info.plist";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.summa.Summa;
+				PRODUCT_BUNDLE_IDENTIFIER = app.summa.Summa.UITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
+				TEST_TARGET_NAME = Summa;
 			};
-			name = Debug;
+			name = Release;
 		};
 		67253307B1BD2E0165639C54 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Config/Summa.entitlements";
+				CODE_SIGN_ENTITLEMENTS = Config/Summa.entitlements;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Summa-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -412,7 +432,7 @@
 		A96EF659D1B5F04D33B49229 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "Config/SummaWidget.entitlements";
+				CODE_SIGN_ENTITLEMENTS = Config/SummaWidget.entitlements;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/SummaWidget-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Summa;
@@ -431,7 +451,7 @@
 		FCEAEAD25765EBBBDBF5FD93 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "Config/SummaWidget.entitlements";
+				CODE_SIGN_ENTITLEMENTS = Config/SummaWidget.entitlements;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/SummaWidget-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Summa;
@@ -444,26 +464,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-			};
-			name = Release;
-		};
-		0DB0FAAC3B161E0C3C1502F3 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = app.summa.Summa.UITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_TARGET_NAME = Summa;
-			};
-			name = Debug;
-		};
-		4A30E97097EC72C018F7CC36 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = app.summa.Summa.UITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_TARGET_NAME = Summa;
 			};
 			name = Release;
 		};
@@ -488,20 +488,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		EC8D040948B8DB10B872F303 /* Build configuration list for PBXNativeTarget "SummaWidgetExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A96EF659D1B5F04D33B49229 /* Debug */,
-				FCEAEAD25765EBBBDBF5FD93 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		44BD2E5F23C05AB2295AE86E /* Build configuration list for PBXNativeTarget "SummaUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0DB0FAAC3B161E0C3C1502F3 /* Debug */,
 				4A30E97097EC72C018F7CC36 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EC8D040948B8DB10B872F303 /* Build configuration list for PBXNativeTarget "SummaWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A96EF659D1B5F04D33B49229 /* Debug */,
+				FCEAEAD25765EBBBDBF5FD93 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

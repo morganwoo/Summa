@@ -73,4 +73,4 @@ export const planSchema = z
 
 export type Plan = z.infer<typeof planSchema>;
 
-export const PHASE_TITLES = ["Find your footing", "Settle into rhythm", "Make it yours"] as const;
+export const PHASE_TITLES = ["Foundation", "Momentum", "Transformation"] as const;
