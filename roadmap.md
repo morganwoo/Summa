@@ -27,4 +27,4 @@
 - [x] Verify the presentation and hover behavior across screen sizes.
 # Uploaded app screens
 - [x] Place supplied screens in the center, onboarding, right, and left phones respectively without changing frames or widgets.
-- [ ] Verify screen loading and presentation across desktop and mobile.
+- [x] Verify screen loading and presentation across desktop and mobile.
