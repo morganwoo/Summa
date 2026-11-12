@@ -4,7 +4,7 @@
 - [x] Verify restoration and independent completion.
 
 # Homepage product presentation
-- [ ] Replace the opening with three mature, custom-designed phone previews.
-- [ ] Highlight conversational onboarding and a tailored ninety-day plan.
-- [ ] Replace the numbered principles with a widgets section.
-- [ ] Verify desktop, mobile, and independent heatmap completion.
+- [x] Replace the opening with three mature, custom-designed phone previews.
+- [x] Highlight conversational onboarding and a tailored ninety-day plan.
+- [x] Replace the numbered principles with a widgets section.
+- [x] Verify desktop, mobile, and independent heatmap completion.
