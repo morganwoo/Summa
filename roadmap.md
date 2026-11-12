@@ -16,6 +16,6 @@
 - [x] Verify the updated presentation on desktop and mobile.
 
 # Reference-matched phone presentation
-- [ ] Match slimmer phone proportions, overlapping arrangement, and metallic edges without changing app screens.
-- [ ] Show widgets in an Apple-style home screen with familiar general-purpose applications.
-- [ ] Verify the phone presentation at desktop and mobile sizes.
+- [x] Match slimmer phone proportions, overlapping arrangement, and metallic edges without changing app screens.
+- [x] Show widgets in an Apple-style home screen with familiar general-purpose applications.
+- [x] Verify the phone presentation at desktop and mobile sizes.
