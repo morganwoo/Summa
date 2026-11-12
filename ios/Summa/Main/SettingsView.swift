@@ -7,11 +7,13 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var clock: TodayClock
     @EnvironmentObject private var onboarding: OnboardingStore
+    @EnvironmentObject private var store: Store
     @AppStorage(ThemeChoice.storageKey) private var themeChoice = ThemeChoice.black.rawValue
     let plan: Plan
 
     @State private var notificationAccess: Reminders.Access = .undetermined
     @State private var confirmRestart = false
+    @State private var paywall: PaywallContext? = nil
 
     var body: some View {
         ScrollView {
@@ -22,6 +24,18 @@ struct SettingsView: View {
                         .font(SummaFont.serif(36, relativeTo: .largeTitle))
                         .accessibilityAddTraits(.isHeader)
                 }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Eyebrow("Membership")
+                    Text(store.planName).font(SummaFont.serif(24, relativeTo: .title3))
+                    Text(store.isPro ? "Unlimited habits, reminders for every habit, and home-screen widgets."
+                                     : "Three active habits, one daily reminder, the full 90-day program.")
+                        .font(.footnote).foregroundStyle(theme.muted)
+                    Button(store.isPro ? "View Summa Pro" : "See Summa Pro") { paywall = .settings }
+                        .buttonStyle(.summaSecondary)
+                        .accessibilityIdentifier("settings.pro")
+                }
+                .card()
 
                 VStack(alignment: .leading, spacing: 12) {
                     Eyebrow("Theme")
@@ -48,8 +62,31 @@ struct SettingsView: View {
                         Text("Add a habit to set a reminder.").font(.footnote).foregroundStyle(theme.muted)
                     }
                     ForEach(plan.activeHabits) { habit in
-                        ReminderRow(habit: habit) { await refreshAccess() }
+                        ReminderRow(habit: habit,
+                                    othersOn: plan.activeHabits.filter { $0.reminderEnabled && $0.id != habit.id }.count,
+                                    isPro: store.isPro,
+                                    onBlocked: { paywall = .reminders }) { await refreshAccess() }
                         if habit.id != plan.activeHabits.last?.id { Hairline() }
+                    }
+                    if !store.isPro, plan.activeHabits.filter({ $0.reminderEnabled }).count > 1 {
+                        Text("Summa Free delivers one reminder, for the first habit in your plan that has one on. The others are paused, not deleted.")
+                            .font(.footnote).foregroundStyle(theme.muted)
+                    } else if !store.isPro {
+                        Text("Summa Free includes one daily reminder.").font(.footnote).foregroundStyle(theme.muted)
+                    }
+                }
+                .card()
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Eyebrow("Widgets")
+                    Text(store.isPro
+                         ? "Add a Summa widget from your home screen: touch and hold an empty area, tap Edit, then Add Widget."
+                         : "Home-screen widgets show today’s habits, your day and stage, and the 90-day heatmap. They are part of Summa Pro.")
+                        .font(.footnote).foregroundStyle(theme.muted)
+                    if !store.isPro {
+                        Button("Unlock widgets") { paywall = .widgets }
+                            .buttonStyle(.summaSecondary)
+                            .accessibilityIdentifier("settings.widgets")
                     }
                 }
                 .card()
@@ -75,6 +112,9 @@ struct SettingsView: View {
             .padding(.bottom, 32)
         }
         .task { await refreshAccess() }
+        .sheet(item: $paywall) { context in
+            SummaProView(context: context).environment(\.theme, theme)
+        }
         .confirmationDialog("Start a new 90 days?", isPresented: $confirmRestart, titleVisibility: .visible) {
             Button("Erase this plan and start over", role: .destructive) {
                 PlanStore.deleteEverything(in: context)
@@ -128,17 +168,19 @@ struct SettingsView: View {
 private struct ReminderRow: View {
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var context
-    @EnvironmentObject private var clock: TodayClock
     let habit: Habit
+    let othersOn: Int
+    let isPro: Bool
+    let onBlocked: () -> Void
     let onPermissionChange: () async -> Void
 
-    private var time: Binding<Date> {
+    private func time(hour: ReferenceWritableKeyPath<Habit, Int>, minute: ReferenceWritableKeyPath<Habit, Int>) -> Binding<Date> {
         Binding(
-            get: { Calendar.current.date(from: DateComponents(hour: habit.reminderHour, minute: habit.reminderMinute)) ?? Date() },
+            get: { Calendar.current.date(from: DateComponents(hour: habit[keyPath: hour], minute: habit[keyPath: minute])) ?? Date() },
             set: { date in
                 let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
-                habit.reminderHour = parts.hour ?? 8
-                habit.reminderMinute = parts.minute ?? 0
+                habit[keyPath: hour] = parts.hour ?? 8
+                habit[keyPath: minute] = parts.minute ?? 0
                 PlanStore.save(context, plan: habit.plan)
             })
     }
@@ -152,8 +194,19 @@ private struct ReminderRow: View {
                 }
             }
             .tint(Color.accent(habit.colorHex))
+            .accessibilityIdentifier("reminder.toggle.\(habit.title)")
             if habit.reminderEnabled {
-                DatePicker("Time", selection: time, displayedComponents: .hourAndMinute).font(.subheadline)
+                DatePicker("Time", selection: time(hour: \.reminderHour, minute: \.reminderMinute), displayedComponents: .hourAndMinute)
+                    .font(.subheadline)
+                Toggle(isOn: Binding(get: { isPro && habit.secondReminderEnabled }, set: { setSecond($0) })) {
+                    Text(isPro ? "Second reminder" : "Second reminder · Pro").font(.subheadline)
+                }
+                .tint(Color.accent(habit.colorHex))
+                if isPro, habit.secondReminderEnabled {
+                    DatePicker("Second time", selection: time(hour: \.secondReminderHour, minute: \.secondReminderMinute),
+                               displayedComponents: .hourAndMinute)
+                        .font(.subheadline)
+                }
             }
         }
     }
@@ -161,15 +214,29 @@ private struct ReminderRow: View {
     private func set(_ on: Bool) {
         guard on else {
             habit.reminderEnabled = false
+            habit.secondReminderEnabled = false
             PlanStore.save(context, plan: habit.plan)
             return
         }
+        guard ReminderPlanner.canEnableReminder(othersEnabled: othersOn, isPro: isPro) else {
+            onBlocked()
+            return
+        }
         Task { @MainActor in
-            // Asked here, when a reminder is first switched on.
+            // Permission is asked here, when a reminder is first switched on.
             let allowed = await Reminders.requestIfNeeded()
             habit.reminderEnabled = allowed
             PlanStore.save(context, plan: habit.plan)
             await onPermissionChange()
         }
+    }
+
+    private func setSecond(_ on: Bool) {
+        guard isPro else {
+            onBlocked()
+            return
+        }
+        habit.secondReminderEnabled = on
+        PlanStore.save(context, plan: habit.plan)
     }
 }

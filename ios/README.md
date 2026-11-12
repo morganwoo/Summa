@@ -34,6 +34,17 @@ Then set the `SUMMA_API_BASE_URL` build setting (project level) to `http://local
 | `-persist` | With `-uiTesting`, use the on-disk store. |
 | `-resetState` | Erase the saved plan and onboarding answers at launch. |
 
+## Summa Pro (StoreKit 2)
+
+Product IDs: `app.summa.pro.monthly` (7.99), `app.summa.pro.annual` (36.99), `app.summa.pro.lifetime` (89.99).
+The Summa scheme runs with `Config/Summa.storekit`, so purchases, restores, renewals, and refunds can be tested
+locally in the simulator (Xcode: Debug > StoreKit > Manage Transactions). To sell in the App Store, create the same
+three product IDs in App Store Connect (one subscription group for monthly and annual, one non-consumable), sign the
+Paid Applications agreement, add a privacy policy URL, and enable the App Groups capability for both targets.
+
+Free: three active habits, one reminder. Pro: unlimited habits, a reminder for every habit plus a second time each,
+and home-screen widgets. Entitlement comes only from verified transactions (`Services/Store.swift`).
+
 ## Tests
 
 - **Schedule and metric rules** (Swift Testing): `SummaCore/Tests`. Run with the Summa scheme's Test action,

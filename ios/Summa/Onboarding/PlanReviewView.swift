@@ -40,7 +40,8 @@ struct PlanReviewView: View {
                 .accessibilityIdentifier("review.begin")
         }
         .sheet(item: $editing) { habit in
-            HabitEditorView(heading: "Edit habit", draft: habit, reminderOn: onboarding.remindersOn.contains(habit.id)) { updated, reminderOn in
+            HabitEditorView(heading: "Edit habit", draft: habit, reminderOn: onboarding.remindersOn.contains(habit.id),
+                            otherRemindersOn: onboarding.remindersOn.subtracting([habit.id]).count) { updated, reminderOn in
                 apply(updated, reminderOn: reminderOn)
             }
             .environment(\.theme, theme)

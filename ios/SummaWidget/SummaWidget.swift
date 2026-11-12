@@ -21,7 +21,7 @@ struct TodayProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodayEntry>) -> Void) {
-        // One entry now and one just after midnight, so "today" rolls over without opening the app.
+        // One entry now and one just after midnight, so the day, stage, and "today" roll over without opening the app.
         let now = Date()
         let snapshot = load()
         let midnight = Calendar.current.startOfDay(for: Calendar.current.date(byAdding: .day, value: 1, to: now) ?? now.addingTimeInterval(86400))
@@ -30,6 +30,7 @@ struct TodayProvider: TimelineProvider {
         completion(Timeline(entries: entries, policy: .after(dayAfter)))
     }
 
+    /// Shown only in the widget gallery.
     static var sample: WidgetSnapshot {
         let start = DayKey(date: Date()).adding(-23)
         func habit(_ title: String, _ hex: String, _ symbol: String, skip: Int) -> WidgetSnapshot.Habit {
@@ -37,9 +38,9 @@ struct TodayProvider: TimelineProvider {
             return WidgetSnapshot.Habit(id: UUID(), title: title, colorHex: hex, symbol: symbol,
                                         timeline: HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: .everyDay)], completed: done))
         }
-        return WidgetSnapshot(habits: [habit("Rise with intention", HabitPalette.gold, "sun.max", skip: 6),
-                                       habit("Train the body", HabitPalette.sage, "figure.walk", skip: 4),
-                                       habit("Evening review", "#C97B5A", "pencil.line", skip: 9)], isWhiteMarble: false)
+        let habits = [habit("Read daily", HabitPalette.gold, "book", skip: 6), habit("Train the body", HabitPalette.sage, "figure.walk", skip: 4),
+                      habit("Evening review", "#C97B5A", "pencil.line", skip: 9)]
+        return WidgetSnapshot(habits: habits, isWhiteMarble: false, isPro: true, allTimelines: habits.map { $0.timeline })
     }
 }
 
@@ -73,38 +74,67 @@ struct TodayWidgetView: View {
     var body: some View {
         let colors = WidgetColors(white: entry.snapshot?.isWhiteMarble ?? false)
         Group {
-            if let snapshot = entry.snapshot, !snapshot.habits.isEmpty {
-                if family == .systemSmall {
-                    small(snapshot, colors: colors)
+            if let snapshot = entry.snapshot, snapshot.planStart != nil {
+                if snapshot.isPro == true {
+                    if family == .systemSmall {
+                        today(snapshot, colors: colors, limit: 3)
+                    } else {
+                        HStack(alignment: .top, spacing: 14) {
+                            today(snapshot, colors: colors, limit: 4)
+                            heatmap(snapshot, colors: colors)
+                        }
+                    }
                 } else {
-                    medium(snapshot, colors: colors)
+                    locked(colors)
                 }
             } else {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("SUMMA").font(.caption2.weight(.semibold)).tracking(2).foregroundStyle(colors.gold)
-                    Text("Open Summa to begin your 90 days.").font(.footnote).foregroundStyle(colors.text)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                message("Open Summa to begin your 90 days.", colors: colors)
             }
         }
         .containerBackground(for: .widget) { colors.background }
     }
 
-    /// Today's habits with their status.
-    private func small(_ snapshot: WidgetSnapshot, colors: WidgetColors) -> some View {
+    private func message(_ text: String, colors: WidgetColors) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("SUMMA").font(.caption2.weight(.semibold)).tracking(2).foregroundStyle(colors.gold)
+            Text(text).font(.footnote).foregroundStyle(colors.text)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// Widgets are a Summa Pro feature. A widget already on the home screen cannot be removed by
+    /// the app, so without Pro it shows this instead of data. Tapping opens the subscription page.
+    private func locked(_ colors: WidgetColors) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("SUMMA PRO").font(.caption2.weight(.semibold)).tracking(2).foregroundStyle(colors.gold)
+            Text("Widgets are part of Summa Pro.").font(.footnote.weight(.semibold)).foregroundStyle(colors.text)
+            Text("Tap to see plans.").font(.caption).foregroundStyle(colors.muted)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .widgetURL(URL(string: "summa://pro"))
+    }
+
+    /// Day, stage, days remaining, and today's habits.
+    private func today(_ snapshot: WidgetSnapshot, colors: WidgetColors, limit: Int) -> some View {
         let today = entry.today
+        let day = snapshot.dayNumber(today: today) ?? 1
+        let remaining = snapshot.daysRemaining(today: today) ?? 0
+        let stage = Stage.forDay(day)
+        let finished = (snapshot.planStart.map { $0.adding(HabitTimeline.planLength - 1) < today }) ?? false
         let due = snapshot.habits.filter { $0.timeline.status(on: today, today: today) != .unscheduled }
-        let done = due.filter { $0.timeline.status(on: today, today: today) == .completed }.count
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("TODAY").font(.caption2.weight(.semibold)).tracking(2).foregroundStyle(colors.gold)
-                Spacer()
-                Text(due.isEmpty ? "Rest" : "\(done)/\(due.count)").font(.caption2.weight(.semibold)).foregroundStyle(colors.muted)
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 5) {
+                Circle().fill(Color(hex: stage.accentHex)).frame(width: 7, height: 7)
+                Text(stage.name.uppercased()).font(.caption2.weight(.semibold)).tracking(1.2).foregroundStyle(colors.text).lineLimit(1)
             }
+            Text(finished ? "90 days complete" : "Day \(day) · \(remaining) left")
+                .font(.caption.weight(.medium)).foregroundStyle(colors.muted).lineLimit(1)
             if due.isEmpty {
-                Text("Nothing is due today.").font(.footnote).foregroundStyle(colors.text)
+                Text(finished ? "The record stands." : "Rest day.").font(.footnote).foregroundStyle(colors.text)
             }
-            ForEach(due.prefix(4)) { habit in
+            ForEach(due.prefix(limit)) { habit in
                 let completed = habit.timeline.status(on: today, today: today) == .completed
                 HStack(spacing: 6) {
                     Image(systemName: completed ? "checkmark.square.fill" : "square")
@@ -115,53 +145,54 @@ struct TodayWidgetView: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(habit.title), \(completed ? "completed" : "due today")")
             }
+            if due.count > limit {
+                Text("+\(due.count - limit) more").font(.caption2).foregroundStyle(colors.muted)
+            }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(stage.name) stage, day \(day) of 90, \(remaining) days remaining")
     }
 
-    /// Weekly consistency: one row per habit, Monday to Sunday.
-    private func medium(_ snapshot: WidgetSnapshot, colors: WidgetColors) -> some View {
+    /// The 90 days across all habits, tinted by stage.
+    private func heatmap(_ snapshot: WidgetSnapshot, colors: WidgetColors) -> some View {
         let today = entry.today
-        let week = WidgetSnapshot.week(containing: today)
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text("THIS WEEK").font(.caption2.weight(.semibold)).tracking(2).foregroundStyle(colors.gold)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { index, letter in
-                    Text(letter).font(.caption2.weight(week[index] == today ? .bold : .regular))
-                        .foregroundStyle(week[index] == today ? colors.text : colors.muted)
-                        .frame(width: 18)
-                }
-            }
-            ForEach(snapshot.habits.prefix(4)) { habit in
-                HStack(spacing: 6) {
-                    Image(systemName: habit.symbol).font(.caption2).foregroundStyle(Color(hex: habit.colorHex)).frame(width: 14)
-                    Text(habit.title).font(.caption).foregroundStyle(colors.text).lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    ForEach(week, id: \.self) { day in
-                        cell(habit.timeline.status(on: day, today: today), color: Color(hex: habit.colorHex), colors: colors)
+        let timelines = snapshot.allTimelines ?? snapshot.habits.map { $0.timeline }
+        let start = snapshot.planStart ?? today
+        let blanks = (start.weekday + 5) % 7
+        let columns = Int((Double(blanks + HabitTimeline.planLength) / 7).rounded(.up))
+        let progress = PlanProgress.completion(timelines: timelines, today: today)
+        return VStack(alignment: .trailing, spacing: 4) {
+            Canvas { context, size in
+                let gap: CGFloat = 0.22
+                let cell = min(size.width / (CGFloat(columns) + CGFloat(columns - 1) * gap), size.height / (7 + 6 * gap))
+                let step = cell * (1 + gap)
+                for index in 0..<HabitTimeline.planLength {
+                    let day = start.adding(index)
+                    let slot = index + blanks
+                    let rect = CGRect(x: CGFloat(slot / 7) * step, y: CGFloat(slot % 7) * step, width: cell, height: cell)
+                    let shape = Path(roundedRect: rect, cornerRadius: cell * 0.25)
+                    let accent = Color(hex: Stage.forDay(index + 1).accentHex)
+                    let info = PlanProgress.day(day, timelines: timelines, today: today)
+                    switch info.status {
+                    case .completed: context.fill(shape, with: .color(accent))
+                    case .partial: context.fill(shape, with: .color(accent.opacity(0.5)))
+                    case .missed: context.stroke(Path(roundedRect: rect.insetBy(dx: 0.5, dy: 0.5), cornerRadius: cell * 0.25), with: .color(colors.muted.opacity(0.55)), lineWidth: 1)
+                    case .current:
+                        context.fill(shape, with: .color(accent.opacity(info.completed > 0 ? 0.5 : 0.15)))
+                        context.stroke(shape, with: .color(colors.text), lineWidth: 1)
+                    case .upcoming: context.fill(shape, with: .color(accent.opacity(0.16)))
+                    case .rest: context.fill(Path(ellipseIn: rect.insetBy(dx: cell * 0.38, dy: cell * 0.38)), with: .color(colors.muted.opacity(0.5)))
                     }
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(habit.title): \(week.filter { habit.timeline.status(on: $0, today: today) == .completed }.count) completed this week")
             }
-            Spacer(minLength: 0)
+            Text(progress.percent.map { "\($0)% complete" } ?? "Nothing due yet")
+                .font(.caption2).foregroundStyle(colors.muted)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    @ViewBuilder
-    private func cell(_ status: DayStatus, color: Color, colors: WidgetColors) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 4, style: .continuous)
-        switch status {
-        case .completed: shape.fill(color).frame(width: 18, height: 14)
-        case .missed: shape.strokeBorder(colors.muted.opacity(0.5)).frame(width: 18, height: 14)
-            .overlay(Rectangle().fill(colors.muted).frame(width: 6, height: 1.5))
-        case .pending: shape.strokeBorder(color, lineWidth: 1.5).frame(width: 18, height: 14)
-        case .upcoming: shape.fill(color.opacity(0.18)).frame(width: 18, height: 14)
-        case .unscheduled: Circle().fill(colors.muted.opacity(0.5)).frame(width: 3, height: 3).frame(width: 18, height: 14)
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(progress.percent.map { "90-day heatmap, \($0) percent complete" } ?? "90-day heatmap")
     }
 }
 
@@ -171,7 +202,7 @@ struct SummaTodayWidget: Widget {
             TodayWidgetView(entry: entry)
         }
         .configurationDisplayName("Summa")
-        .description("Today’s habits, or your week at a glance.")
+        .description("Today’s habits, your day and stage, and the 90-day heatmap. Requires Summa Pro.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

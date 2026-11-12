@@ -49,6 +49,7 @@ enum PlanStore {
             habit.reminderHour = reminder.hour
             habit.reminderMinute = reminder.minute
         }
+        if !reminderEnabled { habit.secondReminderEnabled = false }
         let newDays = WeekdaySet(weekdays: draft.weekdays)
         if newDays.rawValue != WeekdaySet(weekdays: habit.currentWeekdays).rawValue, !newDays.isEmpty {
             let effective = max(today, DayKey(habit.startDay) ?? today)
@@ -119,10 +120,10 @@ enum PlanStore {
     }
 }
 
-/// What the current account is entitled to. Subscriptions arrive in a later phase;
-/// until then everyone is on the free tier. `-proUnlocked` exists only to test the Pro path.
+/// What the current account is entitled to, from verified App Store transactions.
+@MainActor
 enum Entitlements {
-    static var isPro: Bool { AppEnvironment.arguments.contains("-proUnlocked") }
+    static var isPro: Bool { Store.shared.isPro }
 }
 
 /// Shares a snapshot with the widget through the app group.
@@ -136,7 +137,7 @@ enum WidgetBridge {
             WidgetSnapshot.Habit(id: $0.id, title: $0.title, colorHex: $0.colorHex, symbol: $0.symbol, timeline: $0.timeline(planStart: start))
         }
         let white = UserDefaults.standard.string(forKey: ThemeChoice.storageKey) == ThemeChoice.white.rawValue
-        let snapshot = WidgetSnapshot(habits: habits, isWhiteMarble: white)
+        let snapshot = WidgetSnapshot(habits: habits, isWhiteMarble: white, isPro: Entitlements.isPro, allTimelines: plan.timelines)
         if let data = try? JSONEncoder().encode(snapshot) {
             defaults?.set(data, forKey: WidgetSnapshot.defaultsKey)
         }

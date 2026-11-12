@@ -6,6 +6,7 @@ struct MainTabView: View {
     @Environment(\.theme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var clock: TodayClock
+    @EnvironmentObject private var store: Store
     let plan: Plan
 
     private enum Screen: Hashable { case heatmaps, progress, plan, settings }
@@ -63,6 +64,11 @@ struct MainTabView: View {
             WidgetBridge.publish(plan: plan)
             Reminders.sync(plan: plan)
             celebrating = StageMemory.stageToCelebrate(for: plan, today: clock.today)
+        }
+        .onChange(of: store.isPro) { _, _ in
+            // A purchase, restore, expiry, or refund changes what widgets and reminders may do.
+            WidgetBridge.publish(plan: plan)
+            Reminders.sync(plan: plan)
         }
         .onChange(of: clock.today) { _, today in
             // The stage theme follows the program day: it changes on days 22 and 67.

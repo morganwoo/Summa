@@ -86,6 +86,10 @@ final class Habit {
     var reminderEnabled: Bool
     var reminderHour: Int
     var reminderMinute: Int
+    /// A second, later reminder on the same days. Summa Pro.
+    var secondReminderEnabled: Bool = false
+    var secondReminderHour: Int = 20
+    var secondReminderMinute: Int = 0
     var plan: Plan?
     @Relationship(deleteRule: .cascade, inverse: \ScheduleVersion.habit) var schedules: [ScheduleVersion] = []
     @Relationship(deleteRule: .cascade, inverse: \CheckIn.habit) var checkIns: [CheckIn] = []

@@ -12,7 +12,7 @@ struct PlanOverviewView: View {
     @State private var editing: Habit? = nil
     @State private var addingNew = false
     @State private var archiving: Habit? = nil
-    @State private var showLimit = false
+    @State private var paywall: PaywallContext? = nil
 
     var body: some View {
         let today = clock.today
@@ -60,7 +60,7 @@ struct PlanOverviewView: View {
                     habitRow(habit)
                 }
                 Button {
-                    if PlanStore.canAddHabit(to: plan) { addingNew = true } else { showLimit = true }
+                    if PlanStore.canAddHabit(to: plan) { addingNew = true } else { paywall = .habits }
                 } label: {
                     Label("Add a habit", systemImage: "plus")
                 }
@@ -78,7 +78,7 @@ struct PlanOverviewView: View {
                             }
                             Spacer()
                             Button("Restore") {
-                                if PlanStore.canAddHabit(to: plan) { PlanStore.restore(habit, in: context) } else { showLimit = true }
+                                if PlanStore.canAddHabit(to: plan) { PlanStore.restore(habit, in: context) } else { paywall = .habits }
                             }
                                 .font(.subheadline.weight(.semibold)).foregroundStyle(theme.gold).frame(minHeight: 44)
                         }
@@ -92,6 +92,7 @@ struct PlanOverviewView: View {
         }
         .sheet(item: $editing) { habit in
             HabitEditorView(heading: "Edit habit", draft: habit.asDraft(), reminderOn: habit.reminderEnabled,
+                            otherRemindersOn: plan.activeHabits.filter { $0.reminderEnabled && $0.id != habit.id }.count,
                             scheduleNote: "A new schedule starts today. Earlier days keep the schedule they had.") { draft, reminderOn in
                 PlanStore.update(habit, with: draft, reminderEnabled: reminderOn, today: clock.today, in: context)
             }
@@ -102,16 +103,15 @@ struct PlanOverviewView: View {
                             draft: HabitDraft(title: "", action: "", minimumVersion: "", weekdays: [2, 3, 4, 5, 6],
                                               colorHex: nextColor, symbol: "leaf"),
                             reminderOn: false,
+                            otherRemindersOn: plan.activeHabits.filter { $0.reminderEnabled }.count,
                             scheduleNote: "This habit starts today. Earlier days will show as rest days.") { draft, reminderOn in
                 PlanStore.addHabit(draft, to: plan, startDay: clock.today, reminderEnabled: reminderOn, in: context)
                 PlanStore.save(context, plan: plan)
             }
             .environment(\.theme, theme)
         }
-        .sheet(isPresented: $showLimit) {
-            HabitLimitNotice()
-                .environment(\.theme, theme)
-                .presentationDetents([.medium])
+        .sheet(item: $paywall) { context in
+            SummaProView(context: context).environment(\.theme, theme)
         }
         .confirmationDialog("Archive this habit?", isPresented: Binding(get: { archiving != nil }, set: { if !$0 { archiving = nil } }),
                             titleVisibility: .visible) {
@@ -162,35 +162,5 @@ struct PlanOverviewView: View {
             }
         }
         .card()
-    }
-}
-
-/// Shown when a free account tries to hold a fourth active habit. This is where the
-/// Summa Pro subscription page will be presented once subscriptions exist.
-struct HabitLimitNotice: View {
-    @Environment(\.theme) private var theme
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Eyebrow("Summa Free", color: theme.gold)
-            Text("Three active habits at a time.")
-                .font(SummaFont.serif(30, relativeTo: .title))
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-            Text("Archive a habit to make room for another. Its history stays in Progress.")
-                .font(.body)
-            Text("Summa Pro will lift this limit. It is not available to buy yet.")
-                .font(.footnote).foregroundStyle(theme.muted)
-            Spacer(minLength: 0)
-            Button("OK") { dismiss() }
-                .buttonStyle(.summaPrimary)
-                .accessibilityIdentifier("limit.ok")
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .marbleBackground()
-        .foregroundStyle(theme.text)
-        .accessibilityIdentifier("limit.notice")
     }
 }

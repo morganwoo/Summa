@@ -21,6 +21,7 @@
       <BuildableProductRunnable runnableDebuggingMode = "0">
          <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "A6846FD14740B8A809547328" BuildableName = "Summa.app" BlueprintName = "Summa" ReferencedContainer = "container:Summa.xcodeproj"></BuildableReference>
       </BuildableProductRunnable>
+      <StoreKitConfigurationFileReference identifier = "../../Config/Summa.storekit"></StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction buildConfiguration = "Release" shouldUseLaunchSchemeArgsEnv = "YES" savedToolIdentifier = "" useCustomWorkingDirectory = "NO" debugDocumentVersioning = "YES">
       <BuildableProductRunnable runnableDebuggingMode = "0">

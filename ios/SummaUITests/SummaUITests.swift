@@ -113,7 +113,7 @@ final class SummaUITests: XCTestCase {
         // A fourth active habit is held back on the free tier.
         app.tabBars.buttons["Plan"].tap()
         tap(app, "plan.addHabit")
-        XCTAssertTrue(element(app, "limit.notice").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "pro.page").waitForExistence(timeout: 5))
     }
 
     func testCheckInSurvivesRelaunch() {

@@ -1,0 +1,82 @@
+{
+  "identifier": "5A1C0F3E",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "89.99",
+      "familyShareable": false,
+      "internalID": "6500000003",
+      "localizations": [
+        {
+          "description": "Summa Pro, once and for good.",
+          "displayName": "Summa Pro Lifetime",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "app.summa.pro.lifetime",
+      "referenceName": "Summa Pro Lifetime",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_failTransactionsEnabled": false,
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [
+    {
+      "id": "21500001",
+      "localizations": [],
+      "name": "Summa Pro",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "36.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "6500000002",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Summa Pro, billed yearly.",
+              "displayName": "Summa Pro Annual",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "app.summa.pro.annual",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Summa Pro Annual",
+          "subscriptionGroupID": "21500001",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "7.99",
+          "familyShareable": false,
+          "groupNumber": 2,
+          "internalID": "6500000001",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Summa Pro, billed monthly.",
+              "displayName": "Summa Pro Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "app.summa.pro.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Summa Pro Monthly",
+          "subscriptionGroupID": "21500001",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

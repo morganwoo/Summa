@@ -27,40 +27,34 @@ enum Reminders {
         }
     }
 
-    private struct Entry {
-        let id: String
-        let title: String
-        let body: String
-        let weekday: Int
-        let hour: Int
-        let minute: Int
-    }
-
-    /// Replaces every scheduled reminder with what the plan currently asks for.
+    /// Replaces every scheduled reminder with what the plan and the current tier allow.
+    /// Removing first and using stable identifiers means an edit can never leave a duplicate behind.
     @MainActor
-    static func sync(plan: Plan) {
+    @discardableResult
+    static func sync(plan: Plan) -> ReminderPlanner.Plan {
         let finished = plan.isFinished(today: DayKey(date: Date()))
-        var entries: [Entry] = []
-        if !finished {
-            for habit in plan.activeHabits where habit.reminderEnabled {
-                for weekday in habit.currentWeekdays {
-                    entries.append(Entry(id: "habit-\(habit.id.uuidString)-\(weekday)", title: habit.title,
-                                         body: "\(habit.action). On a hard day: \(habit.minimumVersion).",
-                                         weekday: weekday, hour: habit.reminderHour, minute: habit.reminderMinute))
-                }
-            }
+        let requests = finished ? [] : plan.activeHabits.map { habit in
+            ReminderRequest(habitID: habit.id, title: habit.title,
+                            body: "\(habit.action). On a hard day: \(habit.minimumVersion).",
+                            weekdays: habit.currentWeekdays, enabled: habit.reminderEnabled,
+                            hour: habit.reminderHour, minute: habit.reminderMinute,
+                            secondEnabled: habit.secondReminderEnabled, secondHour: habit.secondReminderHour,
+                            secondMinute: habit.secondReminderMinute)
         }
+        let planned = ReminderPlanner.plan(requests, isPro: Entitlements.isPro)
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
-        for entry in entries {
+        for entry in planned.scheduled {
             let content = UNMutableNotificationContent()
             content.title = entry.title
             content.body = entry.body
             content.sound = .default
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: DateComponents(hour: entry.hour, minute: entry.minute, weekday: entry.weekday), repeats: true)
-            center.add(UNNotificationRequest(identifier: entry.id, content: content, trigger: trigger))
+            var when = DateComponents(hour: entry.hour, minute: entry.minute)
+            when.weekday = entry.weekday
+            center.add(UNNotificationRequest(identifier: entry.identifier, content: content,
+                                             trigger: UNCalendarNotificationTrigger(dateMatching: when, repeats: true)))
         }
+        return planned
     }
 
     static func removeAll() {
@@ -77,5 +71,15 @@ enum Reminders {
         calendar.timeZone = .current
         let date = calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date()
         return date.formatted(date: .omitted, time: .shortened)
+    }
+}
+
+/// Lets a reminder appear as a banner even while Summa is open.
+final class ReminderPresenter: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = ReminderPresenter()
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list, .sound])
     }
 }

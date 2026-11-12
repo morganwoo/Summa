@@ -198,6 +198,7 @@ scheme = f'''<?xml version="1.0" encoding="UTF-8"?>
       <BuildableProductRunnable runnableDebuggingMode = "0">
          {ref("Summa", "Summa.app")}
       </BuildableProductRunnable>
+      <StoreKitConfigurationFileReference identifier = "../../Config/Summa.storekit"></StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction buildConfiguration = "Release" shouldUseLaunchSchemeArgsEnv = "YES" savedToolIdentifier = "" useCustomWorkingDirectory = "NO" debugDocumentVersioning = "YES">
       <BuildableProductRunnable runnableDebuggingMode = "0">

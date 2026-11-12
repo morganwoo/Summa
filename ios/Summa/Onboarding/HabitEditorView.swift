@@ -10,10 +10,13 @@ struct HabitEditorView: View {
     let heading: String
     @State var draft: HabitDraft
     @State var reminderOn: Bool
+    /// Reminders already switched on for other habits. Summa Free allows one in total.
+    var otherRemindersOn: Int = 0
     var scheduleNote: String?
     let onSave: (HabitDraft, Bool) -> Void
 
     @State private var reminderDenied = false
+    @State private var paywall: PaywallContext? = nil
 
     private let symbols = ["sun.max", "figure.walk", "book", "pencil.line", "moon", "scope", "drop", "leaf", "dumbbell", "laurel.leading", "music.note", "fork.knife"]
 
@@ -144,11 +147,18 @@ struct HabitEditorView: View {
             }
         }
         .foregroundStyle(theme.text)
+        .sheet(item: $paywall) { context in
+            SummaProView(context: context).environment(\.theme, theme)
+        }
     }
 
     private func setReminder(_ on: Bool) {
         guard on else {
             reminderOn = false
+            return
+        }
+        guard ReminderPlanner.canEnableReminder(othersEnabled: otherRemindersOn, isPro: Entitlements.isPro) else {
+            paywall = .reminders
             return
         }
         if draft.reminder == nil { draft.reminder = ReminderDraft(hour: 8, minute: 0) }

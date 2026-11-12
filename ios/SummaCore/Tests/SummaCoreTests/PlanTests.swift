@@ -314,3 +314,78 @@ private func profile(focus: [String] = [], objective: String = "", obstacles: [S
         #expect(PlanProgress.completion(timelines: [], today: key("2026-11-08")).percent == nil)
     }
 }
+
+@Suite struct ReminderPlannerTests {
+    private func request(_ title: String, days: [Int] = [2, 3, 4, 5, 6], enabled: Bool = true, hour: Int = 8, second: Bool = false) -> ReminderRequest {
+        ReminderRequest(habitID: UUID(), title: title, body: "Do it", weekdays: days, enabled: enabled, hour: hour, minute: 30,
+                        secondEnabled: second, secondHour: 20, secondMinute: 0)
+    }
+
+    @Test func freeGetsOneBasicReminder() {
+        let plan = ReminderPlanner.plan([request("A", enabled: false), request("B", second: true), request("C")], isPro: false)
+        #expect(plan.scheduled.count == 5) // B on five weekdays, first time only
+        #expect(Set(plan.scheduled.map { $0.title }) == ["B"])
+        #expect(plan.scheduled.allSatisfy { $0.hour == 8 && $0.minute == 30 })
+        #expect(plan.pausedHabits == 1)
+        #expect(ReminderPlanner.canEnableReminder(othersEnabled: 0, isPro: false))
+        #expect(!ReminderPlanner.canEnableReminder(othersEnabled: 1, isPro: false))
+        #expect(ReminderPlanner.canEnableReminder(othersEnabled: 9, isPro: true))
+    }
+
+    @Test func proGetsEveryHabitAndSecondTimes() {
+        let plan = ReminderPlanner.plan([request("A"), request("B", second: true), request("C", enabled: false)], isPro: true)
+        #expect(plan.scheduled.count == 15) // A x5, B x5 twice
+        #expect(plan.pausedHabits == 0)
+        #expect(plan.scheduled.filter { $0.hour == 20 }.count == 5)
+    }
+
+    @Test func identifiersAreUniqueAndStableSoNothingDuplicates() {
+        let requests = [request("A", second: true), request("B", days: [1, 2, 3, 4, 5, 6, 7], second: true)]
+        let first = ReminderPlanner.plan(requests, isPro: true)
+        let second = ReminderPlanner.plan(requests, isPro: true)
+        #expect(first == second)
+        #expect(Set(first.scheduled.map { $0.identifier }).count == first.scheduled.count)
+    }
+
+    @Test func dailyHabitsUseOneRepeatingNotification() {
+        let plan = ReminderPlanner.plan([request("Daily", days: [1, 2, 3, 4, 5, 6, 7])], isPro: false)
+        #expect(plan.scheduled.count == 1)
+        #expect(plan.scheduled[0].weekday == nil)
+    }
+
+    @Test func scheduleChangesAndBadInputAreHandled() {
+        var r = request("A", days: [2, 4])
+        #expect(ReminderPlanner.plan([r], isPro: false).scheduled.map { $0.weekday } == [2, 4])
+        r.weekdays = [6, 6, 9, 0]
+        #expect(ReminderPlanner.plan([r], isPro: false).scheduled.map { $0.weekday } == [6])
+        r.weekdays = []
+        #expect(ReminderPlanner.plan([r], isPro: false).scheduled.isEmpty)
+        // A second time equal to the first is not scheduled twice.
+        var same = request("B", second: true)
+        same.secondHour = 8
+        same.secondMinute = 30
+        #expect(ReminderPlanner.plan([same], isPro: true).scheduled.count == 5)
+    }
+
+    @Test func staysUnderTheSystemLimit() {
+        let many = (0..<20).map { request("H\($0)", days: [1, 2, 3, 4, 5, 6], second: true) }
+        let plan = ReminderPlanner.plan(many, isPro: true)
+        #expect(plan.scheduled.count == ReminderPlanner.maxPending)
+        #expect(plan.droppedForLimit == 20 * 12 - ReminderPlanner.maxPending)
+    }
+
+    @Test func widgetSnapshotReportsDayAndDaysRemaining() throws {
+        let start = DayKey("2026-11-02")!
+        let timeline = HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: .everyDay)])
+        let snapshot = WidgetSnapshot(habits: [.init(id: UUID(), title: "A", colorHex: "#DCAF61", symbol: "book", timeline: timeline)],
+                                      isWhiteMarble: false, isPro: true, allTimelines: [timeline])
+        #expect(snapshot.dayNumber(today: start.adding(23)) == 24)
+        #expect(snapshot.daysRemaining(today: start.adding(23)) == 66)
+        #expect(snapshot.daysRemaining(today: start.adding(89)) == 0)
+        #expect(snapshot.daysRemaining(today: start.adding(200)) == 0)
+        // Snapshots written before subscriptions existed still decode, and count as not Pro.
+        let old = try JSONDecoder().decode(WidgetSnapshot.self, from: Data("{\"habits\":[],\"isWhiteMarble\":true}".utf8))
+        #expect(old.isPro == nil)
+        #expect(old.dayNumber(today: start) == nil)
+    }
+}

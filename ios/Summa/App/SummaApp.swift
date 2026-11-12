@@ -1,12 +1,14 @@
 import SwiftUI
 import SwiftData
 import SummaCore
+import UserNotifications
 
 @main
 struct SummaApp: App {
     @AppStorage(ThemeChoice.storageKey) private var themeChoice = ThemeChoice.black.rawValue
     @StateObject private var onboarding = OnboardingStore(persistent: AppEnvironment.usesDisk)
     @StateObject private var clock = TodayClock()
+    @StateObject private var store = Store.shared
     private let container: ModelContainer
 
     init() {
@@ -17,6 +19,7 @@ struct SummaApp: App {
         } catch {
             fatalError("Could not open the Summa store: \(error)")
         }
+        UNUserNotificationCenter.current().delegate = ReminderPresenter.shared
         if AppEnvironment.arguments.contains("-resetState") {
             PlanStore.deleteEverything(in: container.mainContext)
             OnboardingStore.eraseSavedFile()
@@ -30,6 +33,8 @@ struct SummaApp: App {
                 .environment(\.theme, theme)
                 .environmentObject(onboarding)
                 .environmentObject(clock)
+                .environmentObject(store)
+                .task { store.start() }
                 .preferredColorScheme(theme.isDark ? .dark : .light)
                 .tint(theme.gold)
         }
@@ -45,6 +50,7 @@ struct RootView: View {
     @EnvironmentObject private var onboarding: OnboardingStore
     @EnvironmentObject private var clock: TodayClock
     @Query(sort: \Plan.createdAt, order: .reverse) private var plans: [Plan]
+    @State private var paywall: PaywallContext? = nil
 
     var body: some View {
         ZStack {
@@ -62,6 +68,13 @@ struct RootView: View {
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.5), value: plans.first?.id)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { clock.refresh() }
+        }
+        .onOpenURL { url in
+            // The locked widget links here: tapping it is the request to unlock widgets.
+            if url.scheme == "summa", url.host == "pro", !Entitlements.isPro { paywall = .widgets }
+        }
+        .sheet(item: $paywall) { context in
+            SummaProView(context: context).environment(\.theme, theme)
         }
     }
 
