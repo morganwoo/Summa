@@ -18,10 +18,10 @@ export function HabitCard({ name, caption, rate, idx, completed, onComplete }: {
   const Icon = [Moon, Focus, Footprints][idx] ?? Moon;
   return (
     <div ref={ref} className={`actual-habit-card habit-tone-${idx}`}>
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="actual-habit-icon"><Icon size={23} /></div>
-          <div><span className="font-serif text-xl md:text-2xl">{name}</span><p className="mt-1 text-xs text-muted-foreground">{caption}</p></div>
+      <div className="actual-habit-header">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="actual-habit-icon"><Icon size={18} /></div>
+          <span className="actual-habit-name" title={caption}>{name}</span>
         </div>
         <Button size="icon" aria-label={`Mark today — ${name}`} aria-pressed={completed} title={completed ? `Clear today — ${name}` : `Complete today — ${name}`} onClick={onComplete} className="actual-habit-check"><Check /></Button>
       </div>
@@ -43,5 +43,5 @@ export function HabitCard({ name, caption, rate, idx, completed, onComplete }: {
 
 export function Heatmap() {
   const [completed, setCompleted] = useState([false, false, false]);
-  return <div className="flex flex-col gap-5">{habits.map((h, i) => <HabitCard key={h.name} {...h} idx={i} completed={completed[i] ?? false} onComplete={() => setCompleted((current) => toggleLatestDay(current, i))} />)}</div>;
+  return <div className="actual-habit-stack">{habits.map((h, i) => <HabitCard key={h.name} {...h} idx={i} completed={completed[i] ?? false} onComplete={() => setCompleted((current) => toggleLatestDay(current, i))} />)}</div>;
 }
