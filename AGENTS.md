@@ -31,3 +31,4 @@ use the editor.
 
 - Keep demonstration heatmap completion in React state and toggle only the selected habit's latest day; independent checkmarks must not imply saved account data.
 - Keep promotional phone, onboarding, and widget previews browser-safe and illustrative; they must not simulate a live AI service or saved user plans.
+- Normalize the habit curve path length so the scroll-triggered drawing reaches each milestone consistently and remains visible with reduced motion.
