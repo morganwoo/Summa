@@ -443,6 +443,14 @@ struct CompanionChatView: View {
             guard dictation.isRecording || !transcript.isEmpty else { return }
             draft = [textBeforeDictation, transcript].filter { !$0.isEmpty }.joined(separator: " ")
         }
+        .onChange(of: dictation.isRecording) { _, recording in
+            // Recording ended on its own and nothing was heard: say so, rather than leaving silence unexplained.
+            if !recording, dictation.transcript.isEmpty, dictation.access == .granted, draft.trimmed == textBeforeDictation {
+                notice = "Nothing was heard. Check the microphone and try again, or type instead."
+            } else if !recording, dictation.access == .unavailable {
+                notice = "Dictation is not available on this device right now. You can type instead."
+            }
+        }
         .sheet(item: Binding(get: { reviewing.map(ReviewText.init) }, set: { reviewing = $0?.text })) { review in
             NavigationStack {
                 Group {
@@ -510,9 +518,16 @@ struct CompanionChatView: View {
                     Task {
                         // Microphone access is asked for only when the person chooses to speak.
                         if dictation.access == .undetermined { await dictation.requestAccess() }
-                        guard dictation.access == .granted else { return }
-                        if !dictation.isRecording { textBeforeDictation = draft.trimmed }
-                        dictation.toggle()
+                        if dictation.access == .granted {
+                            if !dictation.isRecording { textBeforeDictation = draft.trimmed }
+                            dictation.toggle()
+                        }
+                        // Say why when speaking cannot start, instead of the button quietly disappearing.
+                        if dictation.access == .denied {
+                            notice = "Microphone or speech recognition access is off for Summa. Turn both on in the Settings app, or type instead."
+                        } else if dictation.access == .unavailable {
+                            notice = "Dictation is not available on this device right now. You can type instead."
+                        }
                     }
                 } label: {
                     Image(systemName: dictation.isRecording ? "stop.fill" : "mic.fill")

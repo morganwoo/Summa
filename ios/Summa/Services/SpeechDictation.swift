@@ -16,6 +16,8 @@ final class SpeechDictation: ObservableObject {
     private let engine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
+    private var configurationObserver: NSObjectProtocol?
+    private var restarts = 0
 
     /// Requests speech and microphone access. Called only after the person chooses voice.
     func requestAccess() async {
@@ -67,6 +69,14 @@ final class SpeechDictation: ObservableObject {
             engine.prepare()
             try engine.start()
 
+            // The audio route can change just after recording begins (a headset, a call ending, or the
+            // Simulator settling its audio device). The engine stops itself when that happens, so it
+            // is restarted with the new format instead of leaving a recording that hears nothing.
+            restarts = 0
+            configurationObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
+                Task { @MainActor in self?.resumeAfterRouteChange() }
+            }
+
             task = recognizer.recognitionTask(with: request) { [weak self] result, error in
                 let text = result?.bestTranscription.formattedString
                 let finished = error != nil || (result?.isFinal ?? false)
@@ -92,7 +102,32 @@ final class SpeechDictation: ObservableObject {
         }
     }
 
+    private func resumeAfterRouteChange() {
+        guard isRecording, let request, restarts < 3 else { return }
+        restarts += 1
+        engine.stop()
+        let input = engine.inputNode
+        let format = input.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            stop()
+            access = .unavailable
+            return
+        }
+        Self.installTap(on: input, format: format, request: request)
+        engine.prepare()
+        do {
+            try engine.start()
+        } catch {
+            stop()
+            access = .unavailable
+        }
+    }
+
     func stop() {
+        if let configurationObserver {
+            NotificationCenter.default.removeObserver(configurationObserver)
+            self.configurationObserver = nil
+        }
         guard isRecording || task != nil else { return }
         engine.stop()
         engine.inputNode.removeTap(onBus: 0)

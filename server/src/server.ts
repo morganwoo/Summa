@@ -132,7 +132,9 @@ export function createPlanServer(options: ServerOptions): Server {
       }
       status = 502;
       // Log the kind of failure only; provider messages can echo user text.
-      log(`error ${error instanceof Error ? error.name : "unknown"}`);
+      // The provider's status code is safe to log and says most of what is needed (401 key, 404 model, 429 quota).
+      const providerStatus = error instanceof Error ? /^provider responded \d{3}$/.exec(error.message)?.[0] : undefined;
+      log(`error ${providerStatus ?? (error instanceof Error ? error.name : "unknown")}`);
       return send(response, status, { error: "generation_failed" });
     } finally {
       log(`${request.method} ${path} ${status} ${now() - started}ms`);
