@@ -171,6 +171,7 @@ enum PlanStore {
         if let plan {
             WidgetBridge.publish(plan: plan)
             Reminders.sync(plan: plan)
+            Backend.shared.scheduleSync(plan: plan)
         }
     }
 }

@@ -6,6 +6,10 @@
 	<string>Summa</string>
 	<key>SummaAPIBaseURL</key>
 	<string>$(SUMMA_API_BASE_URL)</string>
+	<key>SupabaseURL</key>
+	<string>$(SUPABASE_URL)</string>
+	<key>SupabaseAnonKey</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>SummaCormorant-Regular.ttf</string>

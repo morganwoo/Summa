@@ -10,7 +10,7 @@ struct MainTabView: View {
     @Environment(\.modelContext) private var context
     let plan: Plan
 
-    private enum Screen: Hashable { case heatmaps, progress, plan, settings }
+    private enum Screen: Hashable { case heatmaps, progress, friends, plan, settings }
     @State private var tab: Screen = .heatmaps
     @State private var selectedHabitID: UUID? = nil
     @State private var celebrating: Stage? = nil
@@ -35,6 +35,11 @@ struct MainTabView: View {
                 .background(StageBackground(stage: stage))
                 .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
                 .tag(Screen.progress)
+
+            FriendsView(plan: plan)
+                .background(StageBackground(stage: stage))
+                .tabItem { Label("Friends", systemImage: "person.2") }
+                .tag(Screen.friends)
 
             PlanOverviewView(plan: plan, openJourney: { journey = $0 })
                 .background(StageBackground(stage: stage))
@@ -71,6 +76,7 @@ struct MainTabView: View {
             Reminders.sync(plan: plan)
             celebrating = StageMemory.stageToCelebrate(for: plan, today: clock.today)
             PlanStore.ensureMilestones(for: plan, in: context)
+            Backend.shared.scheduleSync(plan: plan)
             // The day-90 result is shown once, unasked; after that it lives under Plan > Graduation.
             if celebrating == nil, !plan.graduationSeen,
                Graduation.isDue(timelines: plan.timelines, planStart: plan.start, today: clock.today) {

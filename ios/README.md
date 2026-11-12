@@ -45,6 +45,18 @@ Paid Applications agreement, add a privacy policy URL, and enable the App Groups
 Free: three active habits, one reminder. Pro: unlimited habits, a reminder for every habit plus a second time each,
 and home-screen widgets. Entitlement comes only from verified transactions (`Services/Store.swift`).
 
+## Friends (Supabase)
+
+Friends needs a Supabase project. Without one the tab says it is not connected, and everything else works.
+
+1. Create a Supabase project and run `server/supabase/schema.sql` in its SQL editor.
+2. In Authentication, enable the Email provider with one-time codes (include `{{ .Token }}` in the email template).
+3. Deploy `server/supabase/functions/sync-entitlement` and set its secrets (see the comment at the top of that file).
+4. Set the build settings `SUPABASE_URL` and `SUPABASE_ANON_KEY` on the Summa project. Use the anon key only;
+   the service-role key must never be in the app.
+
+`server/supabase/test.sql` checks the access rules against a local PostgreSQL.
+
 ## Tests
 
 - **Schedule and metric rules** (Swift Testing): `SummaCore/Tests`. Run with the Summa scheme's Test action,

@@ -508,3 +508,77 @@ private func profile(focus: [String] = [], objective: String = "", obstacles: [S
         #expect(MilestoneBuilder.defaults(objective: " ", firstHabit: "", target: "")[2].text.contains("your objective"))
     }
 }
+
+@Suite struct SocialTests {
+    private var start: DayKey { DayKey("2026-11-02")! }
+
+    private func record(done: [Int], days: WeekdaySet = .weekdays) -> HabitRecord {
+        HabitRecord(id: UUID(), title: "Read", minimumVersion: "one page",
+                    timeline: HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: days)],
+                                            completed: Set(done.map { start.adding($0) })))
+    }
+
+    @Test func snapshotHasOneRowPerScheduledDaySoFar() {
+        let r = record(done: [0, 1, 5]) // index 5 is a Saturday: a bonus check-in, not scheduled
+        let rows = SocialSnapshot.rows(for: [r], today: start.adding(8)) // second Tuesday
+        #expect(rows.count == 7) // Mon–Fri, then Mon and Tue
+        #expect(rows.filter { $0.done }.count == 2)
+        #expect(Set(rows.map { $0.day }).count == rows.count) // one row per day: nothing to double count
+        #expect(rows.first?.day == "2026-11-02")
+        // Sending again after an undo flips the same row instead of adding one.
+        let undone = SocialSnapshot.rows(for: [record(done: [1])], today: start.adding(8))
+        #expect(undone.count == 7)
+        #expect(undone.filter { $0.done }.count == 1)
+        #expect(SocialSnapshot.rows(for: [r], today: start.adding(400)).count == 65)
+    }
+
+    @Test func leaderboardRanksByCompletedThenConsistencyAndCanSwitch() {
+        let a = LeaderboardEntry(userId: UUID(), username: "alex", weekCompleted: 10, weekScheduled: 21, totalCompleted: 10, totalScheduled: 21)
+        let b = LeaderboardEntry(userId: UUID(), username: "bea", weekCompleted: 7, weekScheduled: 7, totalCompleted: 7, totalScheduled: 7)
+        let c = LeaderboardEntry(userId: UUID(), username: "cy", weekCompleted: 7, weekScheduled: 14, totalCompleted: 7, totalScheduled: 14)
+        let d = LeaderboardEntry(userId: UUID(), username: "dee", weekCompleted: 0, weekScheduled: 0, totalCompleted: 0, totalScheduled: 0)
+        #expect(Leaderboard.ranked([d, c, b, a], by: .completed).map { $0.username } == ["alex", "bea", "cy", "dee"])
+        #expect(Leaderboard.ranked([d, c, b, a], by: .consistency).map { $0.username } == ["bea", "cy", "alex", "dee"])
+        #expect(a.weekPercent == 48)
+        #expect(d.weekPercent == nil)
+        #expect(Leaderboard.weekStart(for: DayKey("2026-11-08")!).string == "2026-11-02")
+        #expect(Leaderboard.weekStart(for: DayKey("2026-11-09")!).string == "2026-11-09")
+    }
+
+    @Test func leaderboardRowsDecodeFromTheServerShape() throws {
+        let json = """
+        [{"user_id":"00000000-0000-0000-0000-00000000000A","username":"alex_k","plan_start":"2026-11-02","week_completed":7,"week_scheduled":8,"total_completed":7,"total_scheduled":8,"is_me":true}]
+        """
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let rows = try decoder.decode([LeaderboardEntry].self, from: Data(json.utf8))
+        #expect(rows[0].username == "alex_k")
+        #expect(rows[0].isMe)
+        #expect(rows[0].weekPercent == 88)
+        #expect(rows[0].dayNumber(today: DayKey("2026-11-11")!) == 10)
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let row = String(data: try encoder.encode(SharedDayRow(habitId: UUID(), day: "2026-11-02", done: true)), encoding: .utf8) ?? ""
+        #expect(row.contains("habit_id"))
+    }
+
+    @Test func nudgesArePresetAndActivityComesFromTheRecord() {
+        #expect(NudgeMessage.allCases.count == 4)
+        #expect(NudgeMessage(rawValue: "buy my course") == nil)
+        let all = HabitTimeline(planStart: start, rules: [ScheduleRule(effectiveFrom: start, weekdays: .everyDay)])
+        func kinds(_ day: Int, _ t: HabitTimeline) -> [String] {
+            ActivityBuilder.events(planStart: start, timelines: [t], chapter: 1, today: start.adding(day)).map { $0.kind == "week_complete" ? "w\($0.detail)" : $0.kind }
+        }
+        #expect(kinds(3, all).isEmpty)
+        #expect(kinds(7, all) == ["w1"])
+        #expect(kinds(21, all) == ["w1", "w2", "w3", "entered_momentum"])
+        #expect(kinds(66, all).contains("entered_transformation"))
+        var done = all
+        done.completed = Set(done.days)
+        #expect(kinds(90, done).suffix(2) == ["day_90", "graduated"])
+        #expect(kinds(90, all).last == "day_90") // nothing completed: day 90 reached, no graduation
+        let events = ActivityBuilder.events(planStart: start, timelines: [done], chapter: 2, today: start.adding(90))
+        #expect(Set(events).count == events.count)
+        #expect(events.allSatisfy { $0.chapter == 2 })
+    }
+}

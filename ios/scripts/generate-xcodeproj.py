@@ -28,6 +28,8 @@ project_common = {
     "MARKETING_VERSION": "1.0", "CURRENT_PROJECT_VERSION": "1", "DEVELOPMENT_TEAM": TEAM, "CODE_SIGN_STYLE": "Automatic",
     # Empty = draft plans on device. Set to e.g. http://localhost:8787 to use the plan API in ../server.
     "SUMMA_API_BASE_URL": "",
+    # Social backend. Empty = Friends shows "not connected". The anon key is public by design; never put the service-role key here.
+    "SUPABASE_URL": "", "SUPABASE_ANON_KEY": "",
 }
 project_debug = dict(project_common, DEBUG_INFORMATION_FORMAT="dwarf", ENABLE_TESTABILITY="YES", GCC_OPTIMIZATION_LEVEL="0",
                      ONLY_ACTIVE_ARCH="YES", SWIFT_ACTIVE_COMPILATION_CONDITIONS="DEBUG", SWIFT_OPTIMIZATION_LEVEL="-Onone",

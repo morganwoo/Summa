@@ -107,6 +107,8 @@ final class Habit {
     var secondReminderEnabled: Bool = false
     var secondReminderHour: Int = 20
     var secondReminderMinute: Int = 0
+    /// When true, friends never see this habit.
+    var sharedHidden: Bool = false
     var plan: Plan?
     @Relationship(deleteRule: .cascade, inverse: \ScheduleVersion.habit) var schedules: [ScheduleVersion] = []
     @Relationship(deleteRule: .cascade, inverse: \CheckIn.habit) var checkIns: [CheckIn] = []

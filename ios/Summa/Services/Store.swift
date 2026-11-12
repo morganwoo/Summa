@@ -30,6 +30,8 @@ final class Store: ObservableObject {
     @Published private(set) var activeProductID: String?
     @Published private(set) var expirationDate: Date?
     @Published private(set) var isWorking = false
+    /// The signed transaction behind the current entitlement. The social backend verifies it itself.
+    private(set) var latestTransactionJWS: String?
     @Published var outcome: Outcome = .none
 
     private var updates: Task<Void, Never>?
@@ -115,11 +117,16 @@ final class Store: ObservableObject {
     /// are no longer listed by StoreKit, so an expiry simply returns the account to Free.
     func refreshEntitlements() async {
         var best: StoreKit.Transaction?
+        var bestJWS: String?
         for await result in StoreKit.Transaction.currentEntitlements {
             guard case .verified(let transaction) = result, transaction.revocationDate == nil,
                   ProductID.all.contains(transaction.productID) else { continue }
-            if transaction.productID == ProductID.lifetime || best == nil { best = transaction }
+            if transaction.productID == ProductID.lifetime || best == nil {
+                best = transaction
+                bestJWS = result.jwsRepresentation
+            }
         }
+        latestTransactionJWS = bestJWS
         activeProductID = best?.productID
         expirationDate = best?.expirationDate
         UserDefaults.standard.set(best != nil, forKey: Self.cacheKey)
