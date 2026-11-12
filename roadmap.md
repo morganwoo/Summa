@@ -10,7 +10,7 @@
 - [x] Verify desktop, mobile, and independent heatmap completion.
 
 # Minimal presentation refinements
-- [ ] Remove the two text-heavy quote sections.
-- [ ] Show clearly labeled widgets on a phone and a microphone in onboarding.
-- [ ] Add dimensional phone edges and animate the curve through all four milestones.
-- [ ] Verify the updated presentation on desktop and mobile.
+- [x] Remove the two text-heavy quote sections.
+- [x] Show clearly labeled widgets on a phone and a microphone in onboarding.
+- [x] Add dimensional phone edges and animate the curve through all four milestones.
+- [x] Verify the updated presentation on desktop and mobile.
