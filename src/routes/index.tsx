@@ -37,19 +37,6 @@ function Index() {
 
       <OnboardingSection />
 
-      {/* Manifesto */}
-      <section className="flex min-h-[80vh] items-center justify-center px-6 py-32 text-center">
-        <Reveal>
-          <p className="eyebrow mb-8">The philosophy</p>
-          <h2 className="title-roman mx-auto max-w-4xl text-3xl md:text-5xl">
-            Track the habit.<br />See it plainly.<br />Ignore the noise.
-          </h2>
-          <p className="mx-auto mt-8 max-w-xl font-serif text-xl text-muted-foreground">
-            Most habit apps become another distraction. Stoa 90 is the exact solution — simple by design, so the only thing left is the work.
-          </p>
-        </Reveal>
-      </section>
-
       <WidgetsSection />
 
       {/* Heatmap */}
@@ -77,16 +64,6 @@ function Index() {
           </Reveal>
           <Reveal className="md:order-1"><HabitCurve /></Reveal>
         </div>
-      </section>
-
-      {/* Quote */}
-      <section className="flex min-h-[70vh] items-center justify-center px-6 text-center">
-        <Reveal>
-          <blockquote className="mx-auto max-w-4xl font-serif text-3xl italic leading-tight md:text-5xl">
-            “You have power over your mind — not outside events. Realize this, and you will find strength.”
-          </blockquote>
-          <p className="eyebrow mt-8">Marcus Aurelius · Meditations</p>
-        </Reveal>
       </section>
 
       {/* Reviews */}
